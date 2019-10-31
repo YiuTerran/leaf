@@ -130,7 +130,7 @@ func (c *CommandCPUProf) run(args []string) string {
 		}
 		err = pprof.StartCPUProfile(f)
 		if err != nil {
-			f.Close()
+			_ = f.Close()
 			return err.Error()
 		}
 		return fn

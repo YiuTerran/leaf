@@ -3,9 +3,10 @@ package chanrpc
 import (
 	"errors"
 	"fmt"
+	"runtime"
+
 	"github.com/name5566/leaf/conf"
 	"github.com/name5566/leaf/log"
-	"runtime"
 )
 
 // one server per goroutine (goroutine not safe)
@@ -42,10 +43,10 @@ type RetInfo struct {
 }
 
 type Client struct {
-	s               *Server
-	chanSyncRet     chan *RetInfo
-	ChanAsynRet     chan *RetInfo
-	pendingAsynCall int
+	s                *Server
+	chanSyncRet      chan *RetInfo
+	ChanAsyncRet     chan *RetInfo
+	pendingAsyncCall int
 }
 
 func NewServer(l int) *Server {
@@ -107,7 +108,7 @@ func (s *Server) exec(ci *CallInfo) (err error) {
 				err = fmt.Errorf("%v", r)
 			}
 
-			s.ret(ci, &RetInfo{err: fmt.Errorf("%v", r)})
+			_ = s.ret(ci, &RetInfo{err: fmt.Errorf("%v", r)})
 		}
 	}()
 
@@ -170,7 +171,7 @@ func (s *Server) Close() {
 	close(s.ChanCall)
 
 	for ci := range s.ChanCall {
-		s.ret(ci, &RetInfo{
+		_ = s.ret(ci, &RetInfo{
 			err: errors.New("chanrpc server closed"),
 		})
 	}
@@ -186,7 +187,7 @@ func (s *Server) Open(l int) *Client {
 func NewClient(l int) *Client {
 	c := new(Client)
 	c.chanSyncRet = make(chan *RetInfo, 1)
-	c.ChanAsynRet = make(chan *RetInfo, l)
+	c.ChanAsyncRet = make(chan *RetInfo, l)
 	return c
 }
 
@@ -300,26 +301,26 @@ func (c *Client) CallN(id interface{}, args ...interface{}) ([]interface{}, erro
 	return assert(ri.ret), ri.err
 }
 
-func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n int) {
+func (c *Client) asyncCall(id interface{}, args []interface{}, cb interface{}, n int) {
 	f, err := c.f(id, n)
 	if err != nil {
-		c.ChanAsynRet <- &RetInfo{err: err, cb: cb}
+		c.ChanAsyncRet <- &RetInfo{err: err, cb: cb}
 		return
 	}
 
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
-		chanRet: c.ChanAsynRet,
+		chanRet: c.ChanAsyncRet,
 		cb:      cb,
 	}, false)
 	if err != nil {
-		c.ChanAsynRet <- &RetInfo{err: err, cb: cb}
+		c.ChanAsyncRet <- &RetInfo{err: err, cb: cb}
 		return
 	}
 }
 
-func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
+func (c *Client) AsyncCall(id interface{}, _args ...interface{}) {
 	if len(_args) < 1 {
 		panic("callback function not found")
 	}
@@ -340,13 +341,13 @@ func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
 	}
 
 	// too many calls
-	if c.pendingAsynCall >= cap(c.ChanAsynRet) {
+	if c.pendingAsyncCall >= cap(c.ChanAsyncRet) {
 		execCb(&RetInfo{err: errors.New("too many calls"), cb: cb})
 		return
 	}
 
-	c.asynCall(id, args, cb, n)
-	c.pendingAsynCall++
+	c.asyncCall(id, args, cb, n)
+	c.pendingAsyncCall++
 }
 
 func execCb(ri *RetInfo) {
@@ -377,16 +378,16 @@ func execCb(ri *RetInfo) {
 }
 
 func (c *Client) Cb(ri *RetInfo) {
-	c.pendingAsynCall--
+	c.pendingAsyncCall--
 	execCb(ri)
 }
 
 func (c *Client) Close() {
-	for c.pendingAsynCall > 0 {
-		c.Cb(<-c.ChanAsynRet)
+	for c.pendingAsyncCall > 0 {
+		c.Cb(<-c.ChanAsyncRet)
 	}
 }
 
 func (c *Client) Idle() bool {
-	return c.pendingAsynCall == 0
+	return c.pendingAsyncCall == 0
 }

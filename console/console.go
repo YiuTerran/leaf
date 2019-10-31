@@ -2,11 +2,12 @@ package console
 
 import (
 	"bufio"
-	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/network"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/name5566/leaf/conf"
+	"github.com/name5566/leaf/network"
 )
 
 var server *network.TCPServer
@@ -18,7 +19,7 @@ func Init() {
 
 	server = new(network.TCPServer)
 	server.Addr = "localhost:" + strconv.Itoa(conf.ConsolePort)
-	server.MaxConnNum = int(math.MaxInt32)
+	server.MaxConnNum = math.MaxInt32
 	server.PendingWriteNum = 100
 	server.NewAgent = newAgent
 
@@ -45,10 +46,7 @@ func newAgent(conn *network.TCPConn) network.Agent {
 
 func (a *Agent) Run() {
 	for {
-		if conf.ConsolePrompt != "" {
-			a.conn.Write([]byte(conf.ConsolePrompt))
-		}
-
+		a.conn.Write([]byte(conf.ConsolePrompt))
 		line, err := a.reader.ReadString('\n')
 		if err != nil {
 			break

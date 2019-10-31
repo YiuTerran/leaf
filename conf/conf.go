@@ -1,17 +1,19 @@
 package conf
 
-var (
-	LenStackBuf = 4096
+const (
+	LenStackBuf   = 4096
+	ConsolePrompt = "Leaf# "
+)
 
+var (
 	// log
 	LogLevel string
 	LogPath  string
 	LogFlag  int
 
 	// console
-	ConsolePort   int
-	ConsolePrompt string = "Leaf# "
-	ProfilePath   string
+	ConsolePort int
+	ProfilePath string
 
 	// cluster
 	ListenAddr      string

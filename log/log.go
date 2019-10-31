@@ -1,98 +1,92 @@
 package log
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"strings"
+	"sync/atomic"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+var (
+	tracker *zap.Logger
+	gLogger *Logger
+	eLogger *Logger
 )
 
 // levels
 const (
-	debugLevel   = 0
-	releaseLevel = 1
-	errorLevel   = 2
-	fatalLevel   = 3
+	debugLevel = 0
+	infoLevel  = 1
+	warnLevel  = 2
+	errorLevel = 3
+	fatalLevel = 4
 )
 
 const (
-	printDebugLevel   = "[debug  ] "
-	printReleaseLevel = "[release] "
-	printErrorLevel   = "[error  ] "
-	printFatalLevel   = "[fatal  ] "
+	printDebugLevel = "[debug] "
+	printInfoLevel  = "[info ] "
+	printWarnLevel  = "[warn ] "
+	printErrorLevel = "[error] "
+	printFatalLevel = "[fatal] "
 )
 
 type Logger struct {
-	level      int
+	level      int32
 	baseLogger *log.Logger
 	baseFile   *os.File
 }
 
-func New(strLevel string, pathname string, flag int) (*Logger, error) {
-	// level
-	var level int
-	switch strings.ToLower(strLevel) {
+func getLevel(level string) int32 {
+	switch strings.ToLower(level) {
 	case "debug":
-		level = debugLevel
-	case "release":
-		level = releaseLevel
+		return debugLevel
+	case "info":
+		return infoLevel
+	case "warn":
+		return warnLevel
 	case "error":
-		level = errorLevel
+		return errorLevel
 	case "fatal":
-		level = fatalLevel
+		return fatalLevel
 	default:
-		return nil, errors.New("unknown level: " + strLevel)
+		return debugLevel
 	}
+}
 
+func newLogger(strLevel string, flag int) (*Logger, *Logger) {
+	// level
+	level := getLevel(strLevel)
 	// logger
-	var baseLogger *log.Logger
-	var baseFile *os.File
-	if pathname != "" {
-		now := time.Now()
-
-		filename := fmt.Sprintf("%d%02d%02d_%02d_%02d_%02d.log",
-			now.Year(),
-			now.Month(),
-			now.Day(),
-			now.Hour(),
-			now.Minute(),
-			now.Second())
-
-		file, err := os.Create(path.Join(pathname, filename))
-		if err != nil {
-			return nil, err
-		}
-
-		baseLogger = log.New(file, "", flag)
-		baseFile = file
-	} else {
-		baseLogger = log.New(os.Stdout, "", flag)
-	}
-
+	baseLogger := log.New(os.Stdout, "", flag)
 	// new
 	logger := new(Logger)
 	logger.level = level
 	logger.baseLogger = baseLogger
-	logger.baseFile = baseFile
 
-	return logger, nil
+	errLogger := new(Logger)
+	errLogger.level = warnLevel
+	errLogger.baseLogger = log.New(os.Stderr, "", flag)
+	return logger, errLogger
 }
 
 // It's dangerous to call the method on logging
 func (logger *Logger) Close() {
 	if logger.baseFile != nil {
-		logger.baseFile.Close()
+		_ = logger.baseFile.Close()
 	}
 
 	logger.baseLogger = nil
 	logger.baseFile = nil
 }
 
-func (logger *Logger) doPrintf(level int, printLevel string, format string, a ...interface{}) {
-	if level < logger.level {
+func (logger *Logger) doPrintf(level int32, printLevel string, format string, a ...interface{}) {
+	if level < atomic.LoadInt32(&logger.level) {
 		return
 	}
 	if logger.baseLogger == nil {
@@ -100,19 +94,27 @@ func (logger *Logger) doPrintf(level int, printLevel string, format string, a ..
 	}
 
 	format = printLevel + format
-	logger.baseLogger.Output(3, fmt.Sprintf(format, a...))
+	_ = logger.baseLogger.Output(3, fmt.Sprintf(format, a...))
 
 	if level == fatalLevel {
 		os.Exit(1)
 	}
 }
 
+func (logger *Logger) SetLevel(level int32) {
+	atomic.StoreInt32(&logger.level, level)
+}
+
 func (logger *Logger) Debug(format string, a ...interface{}) {
 	logger.doPrintf(debugLevel, printDebugLevel, format, a...)
 }
 
-func (logger *Logger) Release(format string, a ...interface{}) {
-	logger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
+func (logger *Logger) Info(format string, a ...interface{}) {
+	logger.doPrintf(infoLevel, printInfoLevel, format, a...)
+}
+
+func (logger *Logger) Warn(format string, a ...interface{}) {
+	logger.doPrintf(warnLevel, printWarnLevel, format, a...)
 }
 
 func (logger *Logger) Error(format string, a ...interface{}) {
@@ -123,31 +125,70 @@ func (logger *Logger) Fatal(format string, a ...interface{}) {
 	logger.doPrintf(fatalLevel, printFatalLevel, format, a...)
 }
 
-var gLogger, _ = New("debug", "", log.LstdFlags)
-
-// It's dangerous to call the method on logging
-func Export(logger *Logger) {
-	if logger != nil {
-		gLogger = logger
-	}
-}
-
 func Debug(format string, a ...interface{}) {
-	gLogger.doPrintf(debugLevel, printDebugLevel, format, a...)
+	gLogger.Debug(format, a...)
 }
 
-func Release(format string, a ...interface{}) {
-	gLogger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
+func Info(format string, a ...interface{}) {
+	gLogger.Info(format, a...)
+}
+
+func Warn(format string, a ...interface{}) {
+	gLogger.Warn(format, a...)
+	eLogger.Warn(format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	gLogger.doPrintf(errorLevel, printErrorLevel, format, a...)
+	gLogger.Error(format, a...)
+	eLogger.Error(format, a...)
 }
 
 func Fatal(format string, a ...interface{}) {
-	gLogger.doPrintf(fatalLevel, printFatalLevel, format, a...)
+	gLogger.Fatal(format, a...)
+	eLogger.Fatal(format, a...)
 }
 
-func Close() {
-	gLogger.Close()
+func Track(msg string, fields ...zap.Field) {
+	tracker.Info(msg, fields...)
+}
+
+//这里是为了和python中track中用的格式保持一致
+func luckyTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format("2006-01-02T15:04:05.000000"))
+}
+
+func ReloadLogger(level string) {
+	gLogger.SetLevel(getLevel(level))
+}
+
+//使用log之前必须初始化
+func InitLogger(level string, path string) {
+	if gLogger != nil && tracker != nil {
+		return
+	}
+	gLogger, eLogger = newLogger(level, log.LstdFlags|log.Lmicroseconds)
+	//zap的logger
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "@timestamp"
+	encoderCfg.EncodeTime = luckyTimeEncoder
+	rawJSON := []byte(fmt.Sprintf(`{
+	  "level": "%s",
+	  "encoding": "json",
+	  "outputPaths": ["%s/track.json"],
+	  "encoderConfig": {
+	    "levelEncoder": "uppercase"
+	  },
+      "disableCaller": true
+	}`, level, path))
+	var cfg zap.Config
+	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
+		panic(err)
+	}
+	cfg.EncoderConfig = encoderCfg
+	tracker, _ = cfg.Build()
+}
+
+//关闭服务器之前调用，同步缓冲区
+func CloseLogger() {
+	_ = tracker.Sync()
 }
