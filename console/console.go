@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/network"
+	"github.com/YiuTerran/leaf/conf"
+	"github.com/YiuTerran/leaf/network"
 )
 
 var server *network.TCPServer

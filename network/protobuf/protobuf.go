@@ -1,53 +1,56 @@
-package protobuf
+package leaf
 
 import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/name5566/leaf/chanrpc"
-	"github.com/name5566/leaf/log"
+	"log"
 	"math"
 	"reflect"
+
+	"github.com/YiuTerran/leaf/chanrpc"
+	"github.com/golang/protobuf/proto"
 )
 
+// 对leaf中已有的Protobuf协议格式进行扩展，允许自定义的id
 // -------------------------
 // | id | protobuf message |
 // -------------------------
-type Processor struct {
+type processor struct {
 	littleEndian bool
-	msgInfo      []*MsgInfo
+	msgInfo      map[uint16]*msgInfoST
 	msgID        map[reflect.Type]uint16
 }
 
-type MsgInfo struct {
+type msgInfoST struct {
 	msgType       reflect.Type
 	msgRouter     *chanrpc.Server
-	msgHandler    MsgHandler
-	msgRawHandler MsgHandler
+	msgHandler    msgHandlerST
+	msgRawHandler msgHandlerST
 }
 
-type MsgHandler func([]interface{})
+type msgHandlerST func([]interface{})
 
-type MsgRaw struct {
+type msgRawST struct {
 	msgID      uint16
 	msgRawData []byte
 }
 
-func NewProcessor() *Processor {
-	p := new(Processor)
+func newGameProcessor() *processor {
+	p := new(processor)
 	p.littleEndian = false
 	p.msgID = make(map[reflect.Type]uint16)
+	p.msgInfo = make(map[uint16]*msgInfoST)
 	return p
 }
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
-func (p *Processor) SetByteOrder(littleEndian bool) {
+func (p *processor) SetByteOrder(littleEndian bool) {
 	p.littleEndian = littleEndian
 }
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
-func (p *Processor) Register(msg proto.Message) uint16 {
+func (p *processor) Register(msg proto.Message, eventType uint16) {
 	msgType := reflect.TypeOf(msg)
 	if msgType == nil || msgType.Kind() != reflect.Ptr {
 		log.Fatal("protobuf message pointer required")
@@ -59,16 +62,14 @@ func (p *Processor) Register(msg proto.Message) uint16 {
 		log.Fatal("too many protobuf messages (max = %v)", math.MaxUint16)
 	}
 
-	i := new(MsgInfo)
+	i := new(msgInfoST)
 	i.msgType = msgType
-	p.msgInfo = append(p.msgInfo, i)
-	id := uint16(len(p.msgInfo) - 1)
-	p.msgID[msgType] = id
-	return id
+	p.msgInfo[eventType] = i
+	p.msgID[msgType] = eventType
 }
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
-func (p *Processor) SetRouter(msg proto.Message, msgRouter *chanrpc.Server) {
+func (p *processor) SetRouter(msg proto.Message, msgRouter *chanrpc.Server) {
 	msgType := reflect.TypeOf(msg)
 	id, ok := p.msgID[msgType]
 	if !ok {
@@ -79,7 +80,7 @@ func (p *Processor) SetRouter(msg proto.Message, msgRouter *chanrpc.Server) {
 }
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
-func (p *Processor) SetHandler(msg proto.Message, msgHandler MsgHandler) {
+func (p *processor) SetHandler(msg proto.Message, msgHandler msgHandlerST) {
 	msgType := reflect.TypeOf(msg)
 	id, ok := p.msgID[msgType]
 	if !ok {
@@ -90,7 +91,7 @@ func (p *Processor) SetHandler(msg proto.Message, msgHandler MsgHandler) {
 }
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
-func (p *Processor) SetRawHandler(id uint16, msgRawHandler MsgHandler) {
+func (p *processor) SetRawHandler(id uint16, msgRawHandler msgHandlerST) {
 	if id >= uint16(len(p.msgInfo)) {
 		log.Fatal("message id %v not registered", id)
 	}
@@ -99,9 +100,9 @@ func (p *Processor) SetRawHandler(id uint16, msgRawHandler MsgHandler) {
 }
 
 // goroutine safe
-func (p *Processor) Route(msg interface{}, userData interface{}) error {
+func (p *processor) Route(msg interface{}, userData interface{}) error {
 	// raw
-	if msgRaw, ok := msg.(MsgRaw); ok {
+	if msgRaw, ok := msg.(msgRawST); ok {
 		if msgRaw.msgID >= uint16(len(p.msgInfo)) {
 			return fmt.Errorf("message id %v not registered", msgRaw.msgID)
 		}
@@ -129,7 +130,7 @@ func (p *Processor) Route(msg interface{}, userData interface{}) error {
 }
 
 // goroutine safe
-func (p *Processor) Unmarshal(data []byte) (interface{}, error) {
+func (p *processor) Unmarshal(data []byte) (interface{}, error) {
 	if len(data) < 2 {
 		return nil, errors.New("protobuf data too short")
 	}
@@ -141,14 +142,13 @@ func (p *Processor) Unmarshal(data []byte) (interface{}, error) {
 	} else {
 		id = binary.BigEndian.Uint16(data)
 	}
-	if id >= uint16(len(p.msgInfo)) {
+	i, ok := p.msgInfo[id]
+	if !ok {
 		return nil, fmt.Errorf("message id %v not registered", id)
 	}
-
 	// msg
-	i := p.msgInfo[id]
 	if i.msgRawHandler != nil {
-		return MsgRaw{id, data[2:]}, nil
+		return msgRawST{id, data[2:]}, nil
 	} else {
 		msg := reflect.New(i.msgType.Elem()).Interface()
 		return msg, proto.UnmarshalMerge(data[2:], msg.(proto.Message))
@@ -156,7 +156,7 @@ func (p *Processor) Unmarshal(data []byte) (interface{}, error) {
 }
 
 // goroutine safe
-func (p *Processor) Marshal(msg interface{}) ([][]byte, error) {
+func (p *processor) Marshal(msg interface{}) ([][]byte, error) {
 	msgType := reflect.TypeOf(msg)
 
 	// id
@@ -179,7 +179,7 @@ func (p *Processor) Marshal(msg interface{}) ([][]byte, error) {
 }
 
 // goroutine safe
-func (p *Processor) Range(f func(id uint16, t reflect.Type)) {
+func (p *processor) Range(f func(id uint16, t reflect.Type)) {
 	for id, i := range p.msgInfo {
 		f(uint16(id), i.msgType)
 	}

@@ -7,17 +7,17 @@ Leaf champions below philosophies:
 
 * Simple APIs. Leaf tends to provide simple and plain interfaces which are always best for use.
 * Self-healing. Leaf always tries to salvage the process from runtime errors instead of leaving it to crash.
-* Multi-core support. Leaf utilize its modules and [leaf/go](https://github.com/name5566/leaf/tree/master/go) to make use of CPU resouces at maximum while avoiding varieties of side effects may be caused.
+* Multi-core support. Leaf utilize its modules and [leaf/go](https://github.com/YiuTerran/leaf/tree/master/go) to make use of CPU resouces at maximum while avoiding varieties of side effects may be caused.
 
 * Module-based.
 
 Leaf's Modules
 --------------
 
-A game server implemented with Leaf may include many modules (e.g. [LeafServer](https://github.com/name5566/leafserver)) which all share below traits:
+A game server implemented with Leaf may include many modules (e.g. [LeafServer](https://github.com/YiuTerran/leafserver)) which all share below traits:
 
 * Each module runs inside a separate goroutine
-* Modules communicate with one another via a light weight RPC channel([leaf/chanrpc](https://github.com/name5566/leaf/tree/master/chanrpc))
+* Modules communicate with one another via a light weight RPC channel([leaf/chanrpc](https://github.com/YiuTerran/leaf/tree/master/chanrpc))
 
 Leaf suggests not to take in too many modules in your game server implementation.
 
@@ -63,18 +63,18 @@ Leaf source code directories
 How to use Leaf
 ---------------
 
-[LeafServer](https://github.com/name5566/leafserver) is a game server developped with Leaf. Let's start with it.
+[LeafServer](https://github.com/YiuTerran/leafserver) is a game server developped with Leaf. Let's start with it.
 
 Download the source code of LeafServer：
 
 ```
-git clone https://github.com/name5566/leafserver
+git clone https://github.com/YiuTerran/leafserver
 ```
 
 Download and install leafserver to GOPATH:
 
 ```
-go get github.com/name5566/leaf
+go get github.com/YiuTerran/leaf
 ```
 
 Compile LeafServer：
@@ -106,7 +106,7 @@ Firstly we define a JSON-encoded message(likely the protobuf). Open LeafServer m
 package msg
 
 import (
-    "github.com/name5566/leaf/network"
+    "github.com/YiuTerran/leaf/network"
 )
 
 var Processor network.Processor
@@ -122,7 +122,7 @@ Processor is the message handler. Here we use the handler of JSON, the default m
 package msg
 
 import (
-    "github.com/name5566/leaf/network/json"
+    "github.com/YiuTerran/leaf/network/json"
 )
 
 // Create a JSON Processor（or protobuf if you like）
@@ -163,8 +163,8 @@ It is ready to handle `Hello` message in `game` module. Open LeafServer game/int
 package internal
 
 import (
-    "github.com/name5566/leaf/log"
-    "github.com/name5566/leaf/gate"
+    "github.com/YiuTerran/leaf/log"
+    "github.com/YiuTerran/leaf/gate"
     "reflect"
     "server/msg"
 )
@@ -324,7 +324,7 @@ Enter into game module's internal（LeafServer game/internal/module.go）：
 package internal
 
 import (
-    "github.com/name5566/leaf/module"
+    "github.com/YiuTerran/leaf/module"
     "server/base"
 )
 
@@ -360,7 +360,7 @@ Since in Leaf, every module runs in a separate goroutine, a RPC channel is neede
 package internal
 
 import (
-    "github.com/name5566/leaf/gate"
+    "github.com/YiuTerran/leaf/gate"
 )
 
 func init() {
@@ -391,7 +391,7 @@ game.ChanRPC.Go("NewAgent", a)
 
 Here NewAgent will be called with a parameter a which can be retrieved from args[0], the rest can be done in the same manner.
 
-More references are at [leaf/chanrpc](https://github.com/name5566/leaf/blob/master/chanrpc). Please be noted, no matter how delicate the encapsulation is, calling function across goroutines cannot be that straight. Try not to create too many modules and interactions. Modules designed in Leaf are supposed to decouple the businesses from others rather make most use of CPU cores. The correct way to make most use of CPU cores is to use goroutine properly.
+More references are at [leaf/chanrpc](https://github.com/YiuTerran/leaf/blob/master/chanrpc). Please be noted, no matter how delicate the encapsulation is, calling function across goroutines cannot be that straight. Try not to create too many modules and interactions. Modules designed in Leaf are supposed to decouple the businesses from others rather make most use of CPU cores. The correct way to make most use of CPU cores is to use goroutine properly.
 
 ### Leaf Go
 
@@ -433,7 +433,7 @@ The result are:
 
 skeleton.Go() accepts two function parameters, first one will be exercised in a separate goroutine and afterwards the second be exercised within the same goroutine. And res can only be used by one goroutine at one moment so nothing more need to be done for synchronization. This implementation makes CPU can be fully used while no need to block goroutines. It is quite convenient when shared resources are used.
 
-More references are at [leaf/go](https://github.com/name5566/leaf/blob/master/go)。
+More references are at [leaf/go](https://github.com/YiuTerran/leaf/blob/master/go)。
 
 ### Leaf timer
 
@@ -453,7 +453,7 @@ skeleton.AfterFunc(5 * time.Second, func() {
 
 Besides, Leaf timer support [cron expressions](https://en.wikipedia.org/wiki/Cron) to support scheduled jobs like start at 9am daily or Sunday 6pm weekly.
 
-More references are at [leaf/timer](https://github.com/name5566/leaf/blob/master/timer)。
+More references are at [leaf/timer](https://github.com/YiuTerran/leaf/blob/master/timer)。
 
 ### Leaf log
 
@@ -477,11 +477,11 @@ LogFlag = log.Lshortfile
 LogFlag：[https://golang.org/pkg/log/#pkg-constants](https://golang.org/pkg/log/#pkg-constants)
 
 
-More references are at [leaf/log](https://github.com/name5566/leaf/blob/master/log).
+More references are at [leaf/log](https://github.com/YiuTerran/leaf/blob/master/log).
 
 ### Leaf recordfile
 
-Leaf recordfile is formatted in CSV([Example](https://github.com/name5566/leaf/blob/master/recordfile/test.txt)). recordfile is to manage the configuration for game. The usage of recordfile in LeafServer is quite simple:
+Leaf recordfile is formatted in CSV([Example](https://github.com/YiuTerran/leaf/blob/master/recordfile/test.txt)). recordfile is to manage the configuration for game. The usage of recordfile in LeafServer is quite simple:
 
 1. Create a CSV file under bin/gamedata
 2. Call readRf() to read it in gamedata module
@@ -520,9 +520,9 @@ func init() {
 }
 ```
 
-Refer to [leaf/recordfile](https://github.com/name5566/leaf/blob/master/recordfile) for more details.
+Refer to [leaf/recordfile](https://github.com/YiuTerran/leaf/blob/master/recordfile) for more details.
 
 Learn more
 ----------
 
-More references are at Wiki [https://github.com/name5566/leaf/wiki](https://github.com/name5566/leaf/wiki)
+More references are at Wiki [https://github.com/YiuTerran/leaf/wiki](https://github.com/YiuTerran/leaf/wiki)

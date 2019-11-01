@@ -1,12 +1,13 @@
 package module
 
 import (
-	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/log"
 	"runtime"
 	"sync"
-)
 
+	"github.com/YiuTerran/leaf/conf"
+	"github.com/YiuTerran/leaf/log"
+)
+//leaf的模块，启动时按注册顺序逐个启动
 type Module interface {
 	OnInit()
 	OnDestroy()

@@ -2,7 +2,7 @@ package network
 
 import (
 	"github.com/gorilla/websocket"
-	"github.com/name5566/leaf/log"
+	"github.com/YiuTerran/leaf/log"
 	"sync"
 	"time"
 )
@@ -38,23 +38,23 @@ func (client *WSClient) init() {
 
 	if client.ConnNum <= 0 {
 		client.ConnNum = 1
-		log.Release("invalid ConnNum, reset to %v", client.ConnNum)
+		log.Info("invalid ConnNum, reset to %v", client.ConnNum)
 	}
 	if client.ConnectInterval <= 0 {
 		client.ConnectInterval = 3 * time.Second
-		log.Release("invalid ConnectInterval, reset to %v", client.ConnectInterval)
+		log.Info("invalid ConnectInterval, reset to %v", client.ConnectInterval)
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 100
-		log.Release("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
+		log.Info("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
 	}
 	if client.MaxMsgLen <= 0 {
 		client.MaxMsgLen = 4096
-		log.Release("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
+		log.Info("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
 	}
 	if client.HandshakeTimeout <= 0 {
 		client.HandshakeTimeout = 10 * time.Second
-		log.Release("invalid HandshakeTimeout, reset to %v", client.HandshakeTimeout)
+		log.Info("invalid HandshakeTimeout, reset to %v", client.HandshakeTimeout)
 	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
@@ -77,7 +77,7 @@ func (client *WSClient) dial() *websocket.Conn {
 			return conn
 		}
 
-		log.Release("connect to %v error: %v", client.Addr, err)
+		log.Info("connect to %v error: %v", client.Addr, err)
 		time.Sleep(client.ConnectInterval)
 		continue
 	}
@@ -96,7 +96,7 @@ reconnect:
 	client.Lock()
 	if client.closeFlag {
 		client.Unlock()
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 	client.conns[conn] = struct{}{}
@@ -123,7 +123,7 @@ func (client *WSClient) Close() {
 	client.Lock()
 	client.closeFlag = true
 	for conn := range client.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 	client.conns = nil
 	client.Unlock()

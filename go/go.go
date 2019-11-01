@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/name5566/leaf/conf"
-	"github.com/name5566/leaf/log"
+	"github.com/YiuTerran/leaf/conf"
+	"github.com/YiuTerran/leaf/log"
 )
 
 // one Go per goroutine (goroutine not safe)

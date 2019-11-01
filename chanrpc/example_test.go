@@ -2,7 +2,7 @@ package chanrpc_test
 
 import (
 	"fmt"
-	"github.com/name5566/leaf/chanrpc"
+	"github.com/YiuTerran/leaf/chanrpc"
 	"sync"
 )
 
@@ -73,14 +73,14 @@ func Example() {
 			fmt.Println(ra)
 		}
 
-		// asyn
-		c.AsynCall("f0", func(err error) {
+		// async
+		c.AsyncCall("f0", func(err error) {
 			if err != nil {
 				fmt.Println(err)
 			}
 		})
 
-		c.AsynCall("f1", func(ret interface{}, err error) {
+		c.AsyncCall("f1", func(ret interface{}, err error) {
 			if err != nil {
 				fmt.Println(err)
 			} else {
@@ -88,7 +88,7 @@ func Example() {
 			}
 		})
 
-		c.AsynCall("fn", func(ret []interface{}, err error) {
+		c.AsyncCall("fn", func(ret []interface{}, err error) {
 			if err != nil {
 				fmt.Println(err)
 			} else {
@@ -96,7 +96,7 @@ func Example() {
 			}
 		})
 
-		c.AsynCall("add", 1, 2, func(ret interface{}, err error) {
+		c.AsyncCall("add", 1, 2, func(ret interface{}, err error) {
 			if err != nil {
 				fmt.Println(err)
 			} else {
@@ -104,10 +104,10 @@ func Example() {
 			}
 		})
 
-		c.Cb(<-c.ChanAsynRet)
-		c.Cb(<-c.ChanAsynRet)
-		c.Cb(<-c.ChanAsynRet)
-		c.Cb(<-c.ChanAsynRet)
+		c.Cb(<-c.ChanAsyncRet)
+		c.Cb(<-c.ChanAsyncRet)
+		c.Cb(<-c.ChanAsyncRet)
+		c.Cb(<-c.ChanAsyncRet)
 
 		// go
 		s.Go("f0")

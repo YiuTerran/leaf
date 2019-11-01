@@ -2,12 +2,14 @@ package network
 
 import (
 	"crypto/tls"
-	"github.com/gorilla/websocket"
-	"github.com/name5566/leaf/log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/YiuTerran/leaf/log"
+	"github.com/gorilla/websocket"
 )
 
 type WSServer struct {
@@ -34,6 +36,21 @@ type WSHandler struct {
 	wg              sync.WaitGroup
 }
 
+func getRealIP(req *http.Request) net.Addr {
+	ip := req.Header.Get("X-FORWARDED-FOR")
+	if ip == "" {
+		ip = req.Header.Get("X-REAL-IP")
+	}
+	if ip != "" {
+		ip = strings.Split(ip, ",")[0]
+	} else {
+		ip, _, _ = net.SplitHostPort(req.RemoteAddr)
+	}
+	q := net.ParseIP(ip)
+	addr := &net.IPAddr{IP: q}
+	return addr
+}
+
 func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -52,12 +69,12 @@ func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.mutexConns.Lock()
 	if handler.conns == nil {
 		handler.mutexConns.Unlock()
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 	if len(handler.conns) >= handler.maxConnNum {
 		handler.mutexConns.Unlock()
-		conn.Close()
+		_ = conn.Close()
 		log.Debug("too many connections")
 		return
 	}
@@ -65,6 +82,7 @@ func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.mutexConns.Unlock()
 
 	wsConn := newWSConn(conn, handler.pendingWriteNum, handler.maxMsgLen)
+	wsConn.SetOriginIP(getRealIP(r))
 	agent := handler.newAgent(wsConn)
 	agent.Run()
 
@@ -84,19 +102,19 @@ func (server *WSServer) Start() {
 
 	if server.MaxConnNum <= 0 {
 		server.MaxConnNum = 100
-		log.Release("invalid MaxConnNum, reset to %v", server.MaxConnNum)
+		log.Info("invalid MaxConnNum, reset to %v", server.MaxConnNum)
 	}
 	if server.PendingWriteNum <= 0 {
 		server.PendingWriteNum = 100
-		log.Release("invalid PendingWriteNum, reset to %v", server.PendingWriteNum)
+		log.Info("invalid PendingWriteNum, reset to %v", server.PendingWriteNum)
 	}
 	if server.MaxMsgLen <= 0 {
 		server.MaxMsgLen = 4096
-		log.Release("invalid MaxMsgLen, reset to %v", server.MaxMsgLen)
+		log.Info("invalid MaxMsgLen, reset to %v", server.MaxMsgLen)
 	}
 	if server.HTTPTimeout <= 0 {
 		server.HTTPTimeout = 10 * time.Second
-		log.Release("invalid HTTPTimeout, reset to %v", server.HTTPTimeout)
+		log.Info("invalid HTTPTimeout, reset to %v", server.HTTPTimeout)
 	}
 	if server.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
