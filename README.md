@@ -1,27 +1,6 @@
-Leaf
-====
-A pragmatic game server framework in Go (golang).
+请参考原版文档以及说明，主要修正包括：
 
-Features
----------
-
-* Extremely easy to use
-* Reliable
-* Multicore support
-* Modularity
-
-Community
----------
-
-* QQ 群：376389675
-
-Documentation
----------
-
-* [中文文档](https://github.com/YiuTerran/leaf/blob/master/TUTORIAL_ZH.md)
-* [English](https://github.com/YiuTerran/leaf/blob/master/TUTORIAL_EN.md)
-
-Licensing
----------
-
-Leaf is licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/YiuTerran/leaf/blob/master/LICENSE) for the full license text.
+1. 移除了一些不需要的模块，如mongo的支持等，这些直接用第三方库即可；
+2. 将自己实现的log模块改为zap的，性能更好并支持json格式的日志；
+3. 将websocket的RemoteAddr返回值改为透过代理的（如果存在）；
+4. 加上go mod支持，修改版本号为规范格式；

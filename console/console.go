@@ -6,19 +6,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/YiuTerran/leaf/conf"
 	"github.com/YiuTerran/leaf/network"
+)
+
+const (
+	consolePrompt = "leaf#"
 )
 
 var server *network.TCPServer
 
-func Init() {
-	if conf.ConsolePort == 0 {
+func Init(consolePort int) {
+	if consolePort == 0 {
 		return
 	}
-
 	server = new(network.TCPServer)
-	server.Addr = "localhost:" + strconv.Itoa(conf.ConsolePort)
+	server.Addr = "localhost:" + strconv.Itoa(consolePort)
 	server.MaxConnNum = math.MaxInt32
 	server.PendingWriteNum = 100
 	server.NewAgent = newAgent
@@ -46,7 +48,7 @@ func newAgent(conn *network.TCPConn) network.Agent {
 
 func (a *Agent) Run() {
 	for {
-		a.conn.Write([]byte(conf.ConsolePrompt))
+		a.conn.Write([]byte(consolePrompt))
 		line, err := a.reader.ReadString('\n')
 		if err != nil {
 			break

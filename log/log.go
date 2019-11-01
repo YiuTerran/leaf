@@ -10,6 +10,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	LenStackBuf   = 4096
+)
 var (
 	tracker *zap.Logger
 	logger  *zap.SugaredLogger
