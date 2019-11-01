@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -12,7 +13,7 @@ import (
 var (
 	tracker *zap.Logger
 	logger  *zap.SugaredLogger
-	cfg     zap.Config
+	debug   = true
 )
 
 func Debug(format string, a ...interface{}) {
@@ -56,11 +57,7 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 
 //激活debug等级
 func EnableDebug(option bool) {
-	if option {
-		cfg.Level.SetLevel(zap.DebugLevel)
-	} else {
-		cfg.Level.SetLevel(zap.InfoLevel)
-	}
+	debug = option
 }
 
 //path是一个文件夹路径，自动生成track.json
@@ -88,17 +85,24 @@ func InitLogger(path string) {
 	}
 	tc.EncoderConfig = encoderCfg
 	tracker, _ = tc.Build()
-
-	rawJSON = []byte(`{
-		"level": "debug",
-		"outputPaths": ["stdout"],
-		"errorOutputPaths": ["stderr"],
-		"encoding": "console",
-	}`)
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		panic(err)
-	}
-	lg, _ := cfg.Build()
+	//高优先级
+	hp := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.WarnLevel
+	})
+	all := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		if debug {
+			return true
+		}
+		return lvl > zap.DebugLevel
+	})
+	stdout := zapcore.Lock(os.Stdout)
+	stderr := zapcore.Lock(os.Stderr)
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	core := zapcore.NewTee(
+		zapcore.NewCore(encoder, stderr, hp),
+		zapcore.NewCore(encoder, stdout, all),
+	)
+	lg := zap.New(core)
 	logger = lg.Sugar()
 }
 
