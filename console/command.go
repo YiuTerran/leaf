@@ -2,13 +2,17 @@ package console
 
 import (
 	"fmt"
-	"github.com/YiuTerran/leaf/chanrpc"
-	"github.com/YiuTerran/leaf/conf"
-	"github.com/YiuTerran/leaf/log"
 	"os"
 	"path"
 	"runtime/pprof"
 	"time"
+
+	"github.com/YiuTerran/leaf/chanrpc"
+	"github.com/YiuTerran/leaf/log"
+)
+
+const (
+	profilePath = "/tmp"
 )
 
 var commands = []Command{
@@ -144,7 +148,7 @@ func (c *CommandCPUProf) run(args []string) string {
 
 func profileName() string {
 	now := time.Now()
-	return path.Join(conf.ProfilePath,
+	return path.Join(profilePath,
 		fmt.Sprintf("%d%02d%02d_%02d_%02d_%02d",
 			now.Year(),
 			now.Month(),

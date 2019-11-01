@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/YiuTerran/leaf/conf"
 	"github.com/YiuTerran/leaf/log"
 )
 
@@ -100,14 +99,9 @@ func (s *Server) ret(ci *CallInfo, ri *RetInfo) (err error) {
 func (s *Server) exec(ci *CallInfo) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if conf.LenStackBuf > 0 {
-				buf := make([]byte, conf.LenStackBuf)
-				l := runtime.Stack(buf, false)
-				err = fmt.Errorf("%v: %s", r, buf[:l])
-			} else {
-				err = fmt.Errorf("%v", r)
-			}
-
+			buf := make([]byte, log.LenStackBuf)
+			l := runtime.Stack(buf, false)
+			err = fmt.Errorf("%v: %s", r, buf[:l])
 			_ = s.ret(ci, &RetInfo{err: fmt.Errorf("%v", r)})
 		}
 	}()
@@ -353,13 +347,9 @@ func (c *Client) AsyncCall(id interface{}, _args ...interface{}) {
 func execCb(ri *RetInfo) {
 	defer func() {
 		if r := recover(); r != nil {
-			if conf.LenStackBuf > 0 {
-				buf := make([]byte, conf.LenStackBuf)
-				l := runtime.Stack(buf, false)
-				log.Error("%v: %s", r, buf[:l])
-			} else {
-				log.Error("%v", r)
-			}
+			buf := make([]byte, log.LenStackBuf)
+			l := runtime.Stack(buf, false)
+			log.Error("%v: %s", r, buf[:l])
 		}
 	}()
 

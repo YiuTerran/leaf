@@ -4,9 +4,9 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/YiuTerran/leaf/conf"
 	"github.com/YiuTerran/leaf/log"
 )
+
 //leaf的模块，启动时按注册顺序逐个启动
 type Module interface {
 	OnInit()
@@ -59,13 +59,9 @@ func run(m *module) {
 func destroy(m *module) {
 	defer func() {
 		if r := recover(); r != nil {
-			if conf.LenStackBuf > 0 {
-				buf := make([]byte, conf.LenStackBuf)
-				l := runtime.Stack(buf, false)
-				log.Error("%v: %s", r, buf[:l])
-			} else {
-				log.Error("%v", r)
-			}
+			buf := make([]byte, log.LenStackBuf)
+			l := runtime.Stack(buf, false)
+			log.Error("%v: %s", r, buf[:l])
 		}
 	}()
 
