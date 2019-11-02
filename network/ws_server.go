@@ -159,11 +159,11 @@ func (server *WSServer) Start() {
 }
 
 func (server *WSServer) Close() {
-	server.ln.Close()
+	_ = server.ln.Close()
 
 	server.handler.mutexConns.Lock()
 	for conn := range server.handler.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 	server.handler.conns = nil
 	server.handler.mutexConns.Unlock()

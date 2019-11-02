@@ -1,10 +1,11 @@
 package network
 
 import (
-	"github.com/YiuTerran/leaf/log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/YiuTerran/leaf/log"
 )
 
 type TCPServer struct {
@@ -87,7 +88,7 @@ func (server *TCPServer) run() {
 		server.mutexConns.Lock()
 		if len(server.conns) >= server.MaxConnNum {
 			server.mutexConns.Unlock()
-			conn.Close()
+			_ = conn.Close()
 			log.Debug("too many connections")
 			continue
 		}
@@ -114,12 +115,12 @@ func (server *TCPServer) run() {
 }
 
 func (server *TCPServer) Close() {
-	server.ln.Close()
+	_ = server.ln.Close()
 	server.wgLn.Wait()
 
 	server.mutexConns.Lock()
 	for conn := range server.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 	server.conns = nil
 	server.mutexConns.Unlock()

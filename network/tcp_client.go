@@ -95,7 +95,7 @@ reconnect:
 	client.Lock()
 	if client.closeFlag {
 		client.Unlock()
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 	client.conns[conn] = struct{}{}

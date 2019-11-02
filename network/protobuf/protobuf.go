@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"reflect"
 
 	"github.com/YiuTerran/leaf/chanrpc"
+	"github.com/YiuTerran/leaf/log"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -36,7 +36,7 @@ type msgRawST struct {
 	msgRawData []byte
 }
 
-func newGameProcessor() *processor {
+func NewProcessor() *processor {
 	p := new(processor)
 	p.littleEndian = false
 	p.msgID = make(map[reflect.Type]uint16)
@@ -181,6 +181,6 @@ func (p *processor) Marshal(msg interface{}) ([][]byte, error) {
 // goroutine safe
 func (p *processor) Range(f func(id uint16, t reflect.Type)) {
 	for id, i := range p.msgInfo {
-		f(uint16(id), i.msgType)
+		f(id, i.msgType)
 	}
 }

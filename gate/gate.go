@@ -10,6 +10,11 @@ import (
 	"github.com/YiuTerran/leaf/network"
 )
 
+const (
+	AgentCreatedEvent     = "NewAgent"
+	AgentBeforeCloseEvent = "CloseAgent"
+)
+
 type Gate struct {
 	MaxConnNum      int
 	PendingWriteNum int
@@ -43,7 +48,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		wsServer.NewAgent = func(conn *network.WSConn) network.Agent {
 			a := &agent{conn: conn, gate: gate}
 			if gate.AgentChanRPC != nil {
-				gate.AgentChanRPC.Go("NewAgent", a)
+				gate.AgentChanRPC.Go(AgentCreatedEvent, a)
 			}
 			return a
 		}
@@ -61,7 +66,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		tcpServer.NewAgent = func(conn *network.TCPConn) network.Agent {
 			a := &agent{conn: conn, gate: gate}
 			if gate.AgentChanRPC != nil {
-				gate.AgentChanRPC.Go("NewAgent", a)
+				gate.AgentChanRPC.Go(AgentCreatedEvent, a)
 			}
 			return a
 		}
@@ -115,7 +120,7 @@ func (a *agent) Run() {
 
 func (a *agent) OnClose() {
 	if a.gate.AgentChanRPC != nil {
-		err := a.gate.AgentChanRPC.Call0("CloseAgent", a)
+		err := a.gate.AgentChanRPC.Call0(AgentBeforeCloseEvent, a)
 		if err != nil {
 			log.Error("chanrpc error: %v", err)
 		}
