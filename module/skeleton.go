@@ -11,8 +11,8 @@ import (
 
 type Skeleton struct {
 	GoLen              int //回调缓冲区长度限制
-	TimerDispatcherLen int
-	AsyncCallLen       int
+	TimerDispatcherLen int //定时器缓冲区长度限制
+	AsyncCallLen       int //异步调用结果缓冲区长度限制
 	ChanRPCServer      *chanrpc.Server
 	g                  *g.Go
 	dispatcher         *timer.Dispatcher
