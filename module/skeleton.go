@@ -43,7 +43,7 @@ func (s *Skeleton) Init() {
 	s.commandServer = chanrpc.NewServer(0)
 }
 
-func (s *Skeleton) Run(closeSig chan bool) {
+func (s *Skeleton) Run(closeSig chan struct{}) {
 	for {
 		select {
 		case <-closeSig:

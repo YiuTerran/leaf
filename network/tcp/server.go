@@ -1,4 +1,4 @@
-package network
+package tcp
 
 import (
 	"net"
@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/YiuTerran/leaf/log"
+	"github.com/YiuTerran/leaf/network"
 )
 
-type TCPServer struct {
+type Server struct {
 	Addr            string
 	MaxConnNum      int
 	PendingWriteNum int
-	NewAgent        func(*TCPConn) Agent
+	NewAgent        func(*Conn) network.Agent
 	ln              net.Listener
 	conns           ConnSet
 	mutexConns      sync.Mutex
@@ -27,12 +28,12 @@ type TCPServer struct {
 	msgParser    *MsgParser
 }
 
-func (server *TCPServer) Start() {
+func (server *Server) Start() {
 	server.init()
 	go server.run()
 }
 
-func (server *TCPServer) init() {
+func (server *Server) init() {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		log.Fatal("%v", err)
@@ -60,7 +61,7 @@ func (server *TCPServer) init() {
 	server.msgParser = msgParser
 }
 
-func (server *TCPServer) run() {
+func (server *Server) run() {
 	server.wgLn.Add(1)
 	defer server.wgLn.Done()
 
@@ -114,7 +115,7 @@ func (server *TCPServer) run() {
 	}
 }
 
-func (server *TCPServer) Close() {
+func (server *Server) Close() {
 	_ = server.ln.Close()
 	server.wgLn.Wait()
 

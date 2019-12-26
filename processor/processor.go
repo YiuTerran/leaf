@@ -1,4 +1,4 @@
-package network
+package processor
 
 type Processor interface {
 	// must goroutine safe

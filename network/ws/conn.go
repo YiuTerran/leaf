@@ -1,4 +1,4 @@
-package network
+package ws
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 
 type WebsocketConnSet map[*websocket.Conn]struct{}
 
-type WSConn struct {
+type Conn struct {
 	sync.Mutex
 	conn           *websocket.Conn
 	writeChan      chan []byte
@@ -20,8 +20,8 @@ type WSConn struct {
 	remoteOriginIP net.Addr
 }
 
-func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32) *WSConn {
-	wsConn := new(WSConn)
+func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32) *Conn {
+	wsConn := new(Conn)
 	wsConn.conn = conn
 	wsConn.writeChan = make(chan []byte, pendingWriteNum)
 	wsConn.maxMsgLen = maxMsgLen
@@ -47,11 +47,11 @@ func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32) *WSC
 	return wsConn
 }
 
-func (wsConn *WSConn) SetOriginIP(ip net.Addr) {
+func (wsConn *Conn) SetOriginIP(ip net.Addr) {
 	wsConn.remoteOriginIP = ip
 }
 
-func (wsConn *WSConn) doDestroy() {
+func (wsConn *Conn) doDestroy() {
 	_ = wsConn.conn.UnderlyingConn().(*net.TCPConn).SetLinger(0)
 	_ = wsConn.conn.Close()
 
@@ -61,14 +61,14 @@ func (wsConn *WSConn) doDestroy() {
 	}
 }
 
-func (wsConn *WSConn) Destroy() {
+func (wsConn *Conn) Destroy() {
 	wsConn.Lock()
 	defer wsConn.Unlock()
 
 	wsConn.doDestroy()
 }
 
-func (wsConn *WSConn) Close() {
+func (wsConn *Conn) Close() {
 	wsConn.Lock()
 	defer wsConn.Unlock()
 	if wsConn.closeFlag {
@@ -79,7 +79,7 @@ func (wsConn *WSConn) Close() {
 	wsConn.closeFlag = true
 }
 
-func (wsConn *WSConn) doWrite(b []byte) {
+func (wsConn *Conn) doWrite(b []byte) {
 	if len(wsConn.writeChan) == cap(wsConn.writeChan) {
 		log.Debug("close conn: channel full")
 		wsConn.doDestroy()
@@ -89,11 +89,11 @@ func (wsConn *WSConn) doWrite(b []byte) {
 	wsConn.writeChan <- b
 }
 
-func (wsConn *WSConn) LocalAddr() net.Addr {
+func (wsConn *Conn) LocalAddr() net.Addr {
 	return wsConn.conn.LocalAddr()
 }
 
-func (wsConn *WSConn) RemoteAddr() net.Addr {
+func (wsConn *Conn) RemoteAddr() net.Addr {
 	if wsConn.remoteOriginIP != nil {
 		return wsConn.remoteOriginIP
 	}
@@ -101,13 +101,13 @@ func (wsConn *WSConn) RemoteAddr() net.Addr {
 }
 
 // goroutine not safe
-func (wsConn *WSConn) ReadMsg() ([]byte, error) {
+func (wsConn *Conn) ReadMsg() ([]byte, error) {
 	_, b, err := wsConn.conn.ReadMessage()
 	return b, err
 }
 
 // args must not be modified by the others goroutines
-func (wsConn *WSConn) WriteMsg(args ...[]byte) error {
+func (wsConn *Conn) WriteMsg(args ...[]byte) error {
 	wsConn.Lock()
 	defer wsConn.Unlock()
 	if wsConn.closeFlag {

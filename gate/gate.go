@@ -5,6 +5,9 @@ import (
 
 	"github.com/YiuTerran/leaf/chanrpc"
 	"github.com/YiuTerran/leaf/network"
+	"github.com/YiuTerran/leaf/network/tcp"
+	"github.com/YiuTerran/leaf/network/ws"
+	"github.com/YiuTerran/leaf/processor"
 )
 
 const (
@@ -16,7 +19,7 @@ type Gate struct {
 	MaxConnNum      int
 	PendingWriteNum int
 	MaxMsgLen       uint32
-	Processor       network.Processor
+	Processor       processor.Processor
 	AgentChanRPC    *chanrpc.Server
 
 	// websocket
@@ -31,10 +34,10 @@ type Gate struct {
 	LittleEndian bool
 }
 
-func (gate *Gate) Run(closeSig chan bool) {
-	var wsServer *network.WSServer
+func (gate *Gate) Run(closeSig chan struct{}) {
+	var wsServer *ws.Server
 	if gate.WSAddr != "" {
-		wsServer = new(network.WSServer)
+		wsServer = new(ws.Server)
 		wsServer.Addr = gate.WSAddr
 		wsServer.MaxConnNum = gate.MaxConnNum
 		wsServer.PendingWriteNum = gate.PendingWriteNum
@@ -42,7 +45,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		wsServer.HTTPTimeout = gate.HTTPTimeout
 		wsServer.CertFile = gate.CertFile
 		wsServer.KeyFile = gate.KeyFile
-		wsServer.NewAgent = func(conn *network.WSConn) network.Agent {
+		wsServer.NewAgent = func(conn *ws.Conn) network.Agent {
 			a := &agent{conn: conn, gate: gate}
 			if gate.AgentChanRPC != nil {
 				gate.AgentChanRPC.Go(AgentCreatedEvent, a)
@@ -51,16 +54,16 @@ func (gate *Gate) Run(closeSig chan bool) {
 		}
 	}
 
-	var tcpServer *network.TCPServer
+	var tcpServer *tcp.Server
 	if gate.TCPAddr != "" {
-		tcpServer = new(network.TCPServer)
+		tcpServer = new(tcp.Server)
 		tcpServer.Addr = gate.TCPAddr
 		tcpServer.MaxConnNum = gate.MaxConnNum
 		tcpServer.PendingWriteNum = gate.PendingWriteNum
 		tcpServer.LenMsgLen = gate.LenMsgLen
 		tcpServer.MaxMsgLen = gate.MaxMsgLen
 		tcpServer.LittleEndian = gate.LittleEndian
-		tcpServer.NewAgent = func(conn *network.TCPConn) network.Agent {
+		tcpServer.NewAgent = func(conn *tcp.Conn) network.Agent {
 			a := &agent{conn: conn, gate: gate}
 			if gate.AgentChanRPC != nil {
 				gate.AgentChanRPC.Go(AgentCreatedEvent, a)

@@ -1,29 +1,35 @@
-package network
+package tcp
 
 import (
-	"github.com/gorilla/websocket"
-	"github.com/YiuTerran/leaf/log"
+	"net"
 	"sync"
 	"time"
+
+	"github.com/YiuTerran/leaf/log"
+	"github.com/YiuTerran/leaf/network"
 )
 
-type WSClient struct {
+type Client struct {
 	sync.Mutex
-	Addr             string
-	ConnNum          int
-	ConnectInterval  time.Duration
-	PendingWriteNum  int
-	MaxMsgLen        uint32
-	HandshakeTimeout time.Duration
-	AutoReconnect    bool
-	NewAgent         func(*WSConn) Agent
-	dialer           websocket.Dialer
-	conns            WebsocketConnSet
-	wg               sync.WaitGroup
-	closeFlag        bool
+	Addr            string
+	ConnNum         int
+	ConnectInterval time.Duration
+	PendingWriteNum int
+	AutoReconnect   bool
+	NewAgent        func(*Conn) network.Agent
+	conns           ConnSet
+	wg              sync.WaitGroup
+	closeFlag       bool
+
+	// msg parser
+	LenMsgLen    int
+	MinMsgLen    uint32
+	MaxMsgLen    uint32
+	LittleEndian bool
+	msgParser    *MsgParser
 }
 
-func (client *WSClient) Start() {
+func (client *Client) Start() {
 	client.init()
 
 	for i := 0; i < client.ConnNum; i++ {
@@ -32,7 +38,7 @@ func (client *WSClient) Start() {
 	}
 }
 
-func (client *WSClient) init() {
+func (client *Client) init() {
 	client.Lock()
 	defer client.Unlock()
 
@@ -48,14 +54,6 @@ func (client *WSClient) init() {
 		client.PendingWriteNum = 100
 		log.Info("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
 	}
-	if client.MaxMsgLen <= 0 {
-		client.MaxMsgLen = 4096
-		log.Info("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
-	}
-	if client.HandshakeTimeout <= 0 {
-		client.HandshakeTimeout = 10 * time.Second
-		log.Info("invalid HandshakeTimeout, reset to %v", client.HandshakeTimeout)
-	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
 	}
@@ -63,16 +61,19 @@ func (client *WSClient) init() {
 		log.Fatal("client is running")
 	}
 
-	client.conns = make(WebsocketConnSet)
+	client.conns = make(ConnSet)
 	client.closeFlag = false
-	client.dialer = websocket.Dialer{
-		HandshakeTimeout: client.HandshakeTimeout,
-	}
+
+	// msg parser
+	msgParser := NewMsgParser()
+	msgParser.SetMsgLen(client.LenMsgLen, client.MinMsgLen, client.MaxMsgLen)
+	msgParser.SetByteOrder(client.LittleEndian)
+	client.msgParser = msgParser
 }
 
-func (client *WSClient) dial() *websocket.Conn {
+func (client *Client) dial() net.Conn {
 	for {
-		conn, _, err := client.dialer.Dial(client.Addr, nil)
+		conn, err := net.Dial("tcp", client.Addr)
 		if err == nil || client.closeFlag {
 			return conn
 		}
@@ -83,7 +84,7 @@ func (client *WSClient) dial() *websocket.Conn {
 	}
 }
 
-func (client *WSClient) connect() {
+func (client *Client) connect() {
 	defer client.wg.Done()
 
 reconnect:
@@ -91,7 +92,6 @@ reconnect:
 	if conn == nil {
 		return
 	}
-	conn.SetReadLimit(int64(client.MaxMsgLen))
 
 	client.Lock()
 	if client.closeFlag {
@@ -102,12 +102,12 @@ reconnect:
 	client.conns[conn] = struct{}{}
 	client.Unlock()
 
-	wsConn := newWSConn(conn, client.PendingWriteNum, client.MaxMsgLen)
-	agent := client.NewAgent(wsConn)
+	tcpConn := newTCPConn(conn, client.PendingWriteNum, client.msgParser)
+	agent := client.NewAgent(tcpConn)
 	agent.Run()
 
 	// cleanup
-	wsConn.Close()
+	tcpConn.Close()
 	client.Lock()
 	delete(client.conns, conn)
 	client.Unlock()
@@ -119,7 +119,7 @@ reconnect:
 	}
 }
 
-func (client *WSClient) Close() {
+func (client *Client) Close() {
 	client.Lock()
 	client.closeFlag = true
 	for conn := range client.conns {

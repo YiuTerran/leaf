@@ -5,3 +5,4 @@
 3. 将websocket的RemoteAddr返回值改为透过代理的（如果存在）；
 4. 加上go mod支持，修改版本号为规范格式；
 5. protobuf消息支持自定义ID；
+6. 增加了大量utils函数；

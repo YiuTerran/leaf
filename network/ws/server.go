@@ -1,4 +1,4 @@
-package network
+package ws
 
 import (
 	"crypto/tls"
@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/YiuTerran/leaf/log"
+	"github.com/YiuTerran/leaf/network"
 	"github.com/gorilla/websocket"
 )
 
-type WSServer struct {
+type Server struct {
 	Addr            string
 	MaxConnNum      int
 	PendingWriteNum int
@@ -20,16 +21,16 @@ type WSServer struct {
 	HTTPTimeout     time.Duration
 	CertFile        string
 	KeyFile         string
-	NewAgent        func(*WSConn) Agent
+	NewAgent        func(*Conn) network.Agent
 	ln              net.Listener
-	handler         *WSHandler
+	handler         *Handler
 }
 
-type WSHandler struct {
+type Handler struct {
 	maxConnNum      int
 	pendingWriteNum int
 	maxMsgLen       uint32
-	newAgent        func(*WSConn) Agent
+	newAgent        func(*Conn) network.Agent
 	upgrader        websocket.Upgrader
 	conns           WebsocketConnSet
 	mutexConns      sync.Mutex
@@ -51,7 +52,7 @@ func getRealIP(req *http.Request) net.Addr {
 	return addr
 }
 
-func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -94,10 +95,10 @@ func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	agent.OnClose()
 }
 
-func (server *WSServer) Start() {
+func (server *Server) Start() {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Fatal("fail to start tcp server: %v", err)
 	}
 
 	if server.MaxConnNum <= 0 {
@@ -135,7 +136,7 @@ func (server *WSServer) Start() {
 	}
 
 	server.ln = ln
-	server.handler = &WSHandler{
+	server.handler = &Handler{
 		maxConnNum:      server.MaxConnNum,
 		pendingWriteNum: server.PendingWriteNum,
 		maxMsgLen:       server.MaxMsgLen,
@@ -155,10 +156,14 @@ func (server *WSServer) Start() {
 		MaxHeaderBytes: 1024,
 	}
 
-	go httpServer.Serve(ln)
+	go func() {
+		if err = httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
+			log.Fatal("fail to start websocket server:%v", err)
+		}
+	}()
 }
 
-func (server *WSServer) Close() {
+func (server *Server) Close() {
 	_ = server.ln.Close()
 
 	server.handler.mutexConns.Lock()

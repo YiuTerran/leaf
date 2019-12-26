@@ -1,14 +1,15 @@
-package network
+package tcp
 
 import (
-	"github.com/YiuTerran/leaf/log"
 	"net"
 	"sync"
+
+	"github.com/YiuTerran/leaf/log"
 )
 
 type ConnSet map[net.Conn]struct{}
 
-type TCPConn struct {
+type Conn struct {
 	sync.Mutex
 	conn      net.Conn
 	writeChan chan []byte
@@ -16,8 +17,8 @@ type TCPConn struct {
 	msgParser *MsgParser
 }
 
-func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *TCPConn {
-	tcpConn := new(TCPConn)
+func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *Conn {
+	tcpConn := new(Conn)
 	tcpConn.conn = conn
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	tcpConn.msgParser = msgParser
@@ -43,7 +44,7 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *TCPCo
 	return tcpConn
 }
 
-func (tcpConn *TCPConn) doDestroy() {
+func (tcpConn *Conn) doDestroy() {
 	_ = tcpConn.conn.(*net.TCPConn).SetLinger(0)
 	_ = tcpConn.conn.Close()
 
@@ -53,14 +54,14 @@ func (tcpConn *TCPConn) doDestroy() {
 	}
 }
 
-func (tcpConn *TCPConn) Destroy() {
+func (tcpConn *Conn) Destroy() {
 	tcpConn.Lock()
 	defer tcpConn.Unlock()
 
 	tcpConn.doDestroy()
 }
 
-func (tcpConn *TCPConn) Close() {
+func (tcpConn *Conn) Close() {
 	tcpConn.Lock()
 	defer tcpConn.Unlock()
 	if tcpConn.closeFlag {
@@ -71,7 +72,7 @@ func (tcpConn *TCPConn) Close() {
 	tcpConn.closeFlag = true
 }
 
-func (tcpConn *TCPConn) doWrite(b []byte) {
+func (tcpConn *Conn) doWrite(b []byte) {
 	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) {
 		log.Debug("close conn: channel full")
 		tcpConn.doDestroy()
@@ -82,7 +83,7 @@ func (tcpConn *TCPConn) doWrite(b []byte) {
 }
 
 // b must not be modified by the others goroutines
-func (tcpConn *TCPConn) Write(b []byte) {
+func (tcpConn *Conn) Write(b []byte) {
 	tcpConn.Lock()
 	defer tcpConn.Unlock()
 	if tcpConn.closeFlag || b == nil {
@@ -92,22 +93,22 @@ func (tcpConn *TCPConn) Write(b []byte) {
 	tcpConn.doWrite(b)
 }
 
-func (tcpConn *TCPConn) Read(b []byte) (int, error) {
+func (tcpConn *Conn) Read(b []byte) (int, error) {
 	return tcpConn.conn.Read(b)
 }
 
-func (tcpConn *TCPConn) LocalAddr() net.Addr {
+func (tcpConn *Conn) LocalAddr() net.Addr {
 	return tcpConn.conn.LocalAddr()
 }
 
-func (tcpConn *TCPConn) RemoteAddr() net.Addr {
+func (tcpConn *Conn) RemoteAddr() net.Addr {
 	return tcpConn.conn.RemoteAddr()
 }
 
-func (tcpConn *TCPConn) ReadMsg() ([]byte, error) {
+func (tcpConn *Conn) ReadMsg() ([]byte, error) {
 	return tcpConn.msgParser.Read(tcpConn)
 }
 
-func (tcpConn *TCPConn) WriteMsg(args ...[]byte) error {
+func (tcpConn *Conn) WriteMsg(args ...[]byte) error {
 	return tcpConn.msgParser.Write(tcpConn, args...)
 }

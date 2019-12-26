@@ -11,12 +11,12 @@ import (
 type Module interface {
 	OnInit()
 	OnDestroy()
-	Run(closeSig chan bool)
+	Run(closeSig chan struct{})
 }
 
 type module struct {
 	mi       Module
-	closeSig chan bool
+	closeSig chan struct{}
 	wg       sync.WaitGroup
 }
 
@@ -25,7 +25,7 @@ var mods []*module
 func Register(mi Module) {
 	m := new(module)
 	m.mi = mi
-	m.closeSig = make(chan bool, 1)
+	m.closeSig = make(chan struct{}, 1)
 
 	mods = append(mods, m)
 }
@@ -45,7 +45,7 @@ func Init() {
 func Destroy() {
 	for i := len(mods) - 1; i >= 0; i-- {
 		m := mods[i]
-		m.closeSig <- true
+		m.closeSig <- struct{}{}
 		m.wg.Wait()
 		destroy(m)
 	}

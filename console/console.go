@@ -7,19 +7,20 @@ import (
 	"strings"
 
 	"github.com/YiuTerran/leaf/network"
+	"github.com/YiuTerran/leaf/network/tcp"
 )
 
 const (
 	consolePrompt = "leaf#"
 )
 
-var server *network.TCPServer
+var server *tcp.Server
 
 func Init(consolePort int) {
 	if consolePort == 0 {
 		return
 	}
-	server = new(network.TCPServer)
+	server = new(tcp.Server)
 	server.Addr = "localhost:" + strconv.Itoa(consolePort)
 	server.MaxConnNum = math.MaxInt32
 	server.PendingWriteNum = 100
@@ -35,11 +36,11 @@ func Destroy() {
 }
 
 type Agent struct {
-	conn   *network.TCPConn
+	conn   *tcp.Conn
 	reader *bufio.Reader
 }
 
-func newAgent(conn *network.TCPConn) network.Agent {
+func newAgent(conn *tcp.Conn) network.Agent {
 	a := new(Agent)
 	a.conn = conn
 	a.reader = bufio.NewReader(conn)

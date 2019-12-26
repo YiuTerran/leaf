@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	LenStackBuf   = 4096
+	LenStackBuf = 4096
 )
+
 var (
 	tracker *zap.Logger
 	logger  *zap.SugaredLogger

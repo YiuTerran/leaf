@@ -2,6 +2,7 @@ package gate
 
 import (
 	"net"
+	"reflect"
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/network"
