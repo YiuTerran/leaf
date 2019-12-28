@@ -2,10 +2,13 @@ package log
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
+	rotate "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -17,7 +20,8 @@ const (
 var (
 	tracker *zap.Logger
 	logger  *zap.SugaredLogger
-	debug   = true
+	debug   = zap.NewAtomicLevelAt(zap.DebugLevel)
+	once    sync.Once
 )
 
 func Debug(format string, a ...interface{}) {
@@ -46,7 +50,7 @@ func Track(msg string, fields ...zap.Field) {
 }
 
 //辅助函数，Track中使用zap.Any打印Object之前将其转换为原始json
-func Jsonize(obj interface{}) *json.RawMessage {
+func ToRawJson(obj interface{}) *json.RawMessage {
 	bytes, err := json.Marshal(obj)
 	if err != nil {
 		return nil
@@ -61,53 +65,63 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 
 //激活debug等级
 func EnableDebug(option bool) {
-	debug = option
+	if option {
+		debug.SetLevel(zap.DebugLevel)
+	} else {
+		debug.SetLevel(zap.InfoLevel)
+	}
 }
 
-//path是一个文件夹路径，自动生成track.json
+//path是一个文件夹路径，自动生成track.json, service.log, err.log
 //其他的输出到标准输出和标准错误
 func InitLogger(path string) {
-	if logger != nil && tracker != nil {
-		return
-	}
-	//track logger
-	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.TimeKey = "@timestamp"
-	encoderCfg.EncodeTime = timeEncoder
-	rawJSON := []byte(fmt.Sprintf(`{
-	  "level": "info",
-	  "encoding": "json",
-	  "outputPaths": ["%s/track.json"],
-	  "encoderConfig": {
-	    "levelEncoder": "uppercase"
-	  },
-      "disableCaller": true
-	}`, path))
-	var tc zap.Config
-	if err := json.Unmarshal(rawJSON, &tc); err != nil {
+	once.Do(func() {
+		encoderCfg := zap.NewProductionEncoderConfig()
+		encoderCfg.TimeKey = "@timestamp"
+		encoderCfg.EncodeTime = timeEncoder
+		tracker = zap.New(
+			zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg),
+				zapcore.AddSync(getWriter(filepath.Join(path, "track.log"))),
+				zap.InfoLevel))
+		//高优先级
+		hp := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+			return lvl >= zapcore.WarnLevel
+		})
+		//所有
+		all := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+			if debug.Enabled(zap.DebugLevel) {
+				return true
+			}
+			return lvl > zap.DebugLevel
+		})
+		//都输出到标准输出，方便调试
+		warnWriter := getWriter(filepath.Join(path, "error.log"))
+		infoWriter := getWriter(filepath.Join(path, "service.log"))
+		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+		core := zapcore.NewTee(
+			// 将info及以下写入logPath,  warn及以上写入errPath
+			zapcore.NewCore(encoder, zapcore.AddSync(infoWriter), all),
+			zapcore.NewCore(encoder, zapcore.AddSync(warnWriter), hp),
+			//同步到stdout，方便调试
+			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
+		)
+		lg := zap.New(core)
+		logger = lg.Sugar()
+	})
+}
+
+func getWriter(filename string) io.Writer {
+	// 生成rotatelogs的Logger 实际生成的文件名 demo.log.mmdd
+	hook, err := rotate.New(
+		filename+".%m%d",
+		rotate.WithLinkName(filename),
+		rotate.WithMaxAge(time.Hour*24*10),    // 保存10天
+		rotate.WithRotationTime(time.Hour*24), //切割频率 24小时
+	)
+	if err != nil {
 		panic(err)
 	}
-	tc.EncoderConfig = encoderCfg
-	tracker, _ = tc.Build()
-	//高优先级
-	hp := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.WarnLevel
-	})
-	all := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		if debug {
-			return true
-		}
-		return lvl > zap.DebugLevel
-	})
-	stdout := zapcore.Lock(os.Stdout)
-	stderr := zapcore.Lock(os.Stderr)
-	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-	core := zapcore.NewTee(
-		zapcore.NewCore(encoder, stderr, hp),
-		zapcore.NewCore(encoder, stdout, all),
-	)
-	lg := zap.New(core)
-	logger = lg.Sugar()
+	return hook
 }
 
 //关闭服务器之前调用，同步缓冲区
