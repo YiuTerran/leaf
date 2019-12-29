@@ -18,10 +18,12 @@ const (
 )
 
 var (
-	tracker *zap.Logger
-	logger  *zap.SugaredLogger
-	debug   = zap.NewAtomicLevelAt(zap.DebugLevel)
-	once    sync.Once
+	tracker    *zap.Logger
+	logger     *zap.SugaredLogger
+	InfoWriter io.Writer
+	WarnWriter io.Writer
+	debug      = zap.NewAtomicLevelAt(zap.DebugLevel)
+	once       sync.Once
 )
 
 func Debug(format string, a ...interface{}) {
@@ -95,13 +97,13 @@ func InitLogger(path string) {
 			return lvl > zap.DebugLevel
 		})
 		//都输出到标准输出，方便调试
-		warnWriter := getWriter(filepath.Join(path, "error.log"))
-		infoWriter := getWriter(filepath.Join(path, "service.log"))
+		WarnWriter = getWriter(filepath.Join(path, "error.log"))
+		InfoWriter = getWriter(filepath.Join(path, "service.log"))
 		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 		core := zapcore.NewTee(
 			// 将info及以下写入logPath,  warn及以上写入errPath
-			zapcore.NewCore(encoder, zapcore.AddSync(infoWriter), all),
-			zapcore.NewCore(encoder, zapcore.AddSync(warnWriter), hp),
+			zapcore.NewCore(encoder, zapcore.AddSync(InfoWriter), all),
+			zapcore.NewCore(encoder, zapcore.AddSync(WarnWriter), hp),
 			//同步到stdout，方便调试
 			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
 		)
