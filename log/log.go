@@ -20,8 +20,8 @@ const (
 var (
 	tracker    *zap.Logger
 	logger     *zap.SugaredLogger
-	InfoWriter io.Writer
-	WarnWriter io.Writer
+	infoWriter io.Writer
+	warnWriter io.Writer
 	debug      = zap.NewAtomicLevelAt(zap.DebugLevel)
 	once       sync.Once
 )
@@ -97,13 +97,13 @@ func InitLogger(path string) {
 			return lvl > zap.DebugLevel
 		})
 		//都输出到标准输出，方便调试
-		WarnWriter = getWriter(filepath.Join(path, "error.log"))
-		InfoWriter = getWriter(filepath.Join(path, "service.log"))
+		warnWriter = getWriter(filepath.Join(path, "error.log"))
+		infoWriter = getWriter(filepath.Join(path, "service.log"))
 		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 		core := zapcore.NewTee(
 			// 将info及以下写入logPath,  warn及以上写入errPath
-			zapcore.NewCore(encoder, zapcore.AddSync(InfoWriter), all),
-			zapcore.NewCore(encoder, zapcore.AddSync(WarnWriter), hp),
+			zapcore.NewCore(encoder, zapcore.AddSync(infoWriter), all),
+			zapcore.NewCore(encoder, zapcore.AddSync(warnWriter), hp),
 			//同步到stdout，方便调试
 			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
 		)
@@ -124,6 +124,10 @@ func getWriter(filename string) io.Writer {
 		panic(err)
 	}
 	return hook
+}
+
+func GetOriginLogger() *zap.SugaredLogger {
+	return logger
 }
 
 //关闭服务器之前调用，同步缓冲区
