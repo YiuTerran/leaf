@@ -5,6 +5,12 @@ package udp
 //但是单次包最大长度是有限制的(理论最大值：65507)，如果超出这个限制，就要拆包；但是由于UDP不可靠，这种情况下就要自己实现TCP的很多功能
 //另外，由于MTU的限制，UDP的长度最好在512字节之内（参考http://dwz.win/vN5)
 
-type Client struct {
+const (
+	MaxPacketSize = 65507
+	DefaultPacketSize = 512
+)
 
+type Client struct {
+	Addr string
+	MaxMsgLength
 }

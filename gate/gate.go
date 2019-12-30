@@ -60,9 +60,10 @@ func (gate *Gate) Run(closeSig chan struct{}) {
 		tcpServer.Addr = gate.TCPAddr
 		tcpServer.MaxConnNum = gate.MaxConnNum
 		tcpServer.PendingWriteNum = gate.PendingWriteNum
-		tcpServer.LenMsgLen = gate.LenMsgLen
-		tcpServer.MaxMsgLen = gate.MaxMsgLen
-		tcpServer.LittleEndian = gate.LittleEndian
+		parser := tcp.NewDefaultMsgParser()
+		parser.SetByteOrder(gate.LittleEndian)
+		parser.SetMsgLen(gate.LenMsgLen,0,gate.MaxMsgLen)
+		tcpServer.Parser = parser
 		tcpServer.NewAgent = func(conn *tcp.Conn) network.Agent {
 			a := &agent{conn: conn, gate: gate}
 			if gate.AgentChanRPC != nil {
