@@ -14,14 +14,14 @@ type Conn struct {
 	conn      net.Conn
 	writeChan chan []byte
 	closeFlag bool
-	msgParser *MsgParser
+	parser    IParser
 }
 
-func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *Conn {
+func newTCPConn(conn net.Conn, pendingWriteNum int, parser IParser) *Conn {
 	tcpConn := new(Conn)
 	tcpConn.conn = conn
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
-	tcpConn.msgParser = msgParser
+	tcpConn.parser = parser
 
 	go func() {
 		for b := range tcpConn.writeChan {
@@ -106,9 +106,9 @@ func (tcpConn *Conn) RemoteAddr() net.Addr {
 }
 
 func (tcpConn *Conn) ReadMsg() ([]byte, error) {
-	return tcpConn.msgParser.Read(tcpConn)
+	return tcpConn.parser.Read(tcpConn)
 }
 
 func (tcpConn *Conn) WriteMsg(args ...[]byte) error {
-	return tcpConn.msgParser.Write(tcpConn, args...)
+	return tcpConn.parser.Write(tcpConn, args...)
 }

@@ -10,15 +10,15 @@ import (
 // --------------
 // | len | data |
 // --------------
-type MsgParser struct {
+type DefaultMsgParser struct {
 	lenMsgLen    int
 	minMsgLen    uint32
 	maxMsgLen    uint32
 	littleEndian bool
 }
 
-func NewMsgParser() *MsgParser {
-	p := new(MsgParser)
+func NewDefaultMsgParser() *DefaultMsgParser {
+	p := new(DefaultMsgParser)
 	p.lenMsgLen = 2
 	p.minMsgLen = 1
 	p.maxMsgLen = 4096
@@ -28,7 +28,7 @@ func NewMsgParser() *MsgParser {
 }
 
 // It's dangerous to call the method on reading or writing
-func (p *MsgParser) SetMsgLen(lenMsgLen int, minMsgLen uint32, maxMsgLen uint32) {
+func (p *DefaultMsgParser) SetMsgLen(lenMsgLen int, minMsgLen uint32, maxMsgLen uint32) {
 	if lenMsgLen == 1 || lenMsgLen == 2 || lenMsgLen == 4 {
 		p.lenMsgLen = lenMsgLen
 	}
@@ -57,12 +57,12 @@ func (p *MsgParser) SetMsgLen(lenMsgLen int, minMsgLen uint32, maxMsgLen uint32)
 }
 
 // It's dangerous to call the method on reading or writing
-func (p *MsgParser) SetByteOrder(littleEndian bool) {
+func (p *DefaultMsgParser) SetByteOrder(littleEndian bool) {
 	p.littleEndian = littleEndian
 }
 
 // goroutine safe
-func (p *MsgParser) Read(conn *Conn) ([]byte, error) {
+func (p *DefaultMsgParser) Read(conn *Conn) ([]byte, error) {
 	var b [4]byte
 	bufMsgLen := b[:p.lenMsgLen]
 
@@ -107,7 +107,7 @@ func (p *MsgParser) Read(conn *Conn) ([]byte, error) {
 }
 
 // goroutine safe
-func (p *MsgParser) Write(conn *Conn, args ...[]byte) error {
+func (p *DefaultMsgParser) Write(conn *Conn, args ...[]byte) error {
 	// get len
 	var msgLen uint32
 	for i := 0; i < len(args); i++ {

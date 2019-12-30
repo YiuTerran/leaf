@@ -21,11 +21,7 @@ type Server struct {
 	wgConns         sync.WaitGroup
 
 	// msg parser
-	LenMsgLen    int
-	MinMsgLen    uint32
-	MaxMsgLen    uint32
-	LittleEndian bool
-	msgParser    *MsgParser
+	Parser IParser
 }
 
 func (server *Server) Start() {
@@ -55,10 +51,10 @@ func (server *Server) init() {
 	server.conns = make(ConnSet)
 
 	// msg parser
-	msgParser := NewMsgParser()
-	msgParser.SetMsgLen(server.LenMsgLen, server.MinMsgLen, server.MaxMsgLen)
-	msgParser.SetByteOrder(server.LittleEndian)
-	server.msgParser = msgParser
+	if server.Parser == nil {
+		msgParser := NewDefaultMsgParser()
+		server.Parser = msgParser
+	}
 }
 
 func (server *Server) run() {
@@ -98,7 +94,7 @@ func (server *Server) run() {
 
 		server.wgConns.Add(1)
 
-		tcpConn := newTCPConn(conn, server.PendingWriteNum, server.msgParser)
+		tcpConn := newTCPConn(conn, server.PendingWriteNum, server.Parser)
 		agent := server.NewAgent(tcpConn)
 		go func() {
 			agent.Run()

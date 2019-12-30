@@ -20,13 +20,8 @@ type Client struct {
 	conns           ConnSet
 	wg              sync.WaitGroup
 	closeFlag       bool
-
 	// msg parser
-	LenMsgLen    int
-	MinMsgLen    uint32
-	MaxMsgLen    uint32
-	LittleEndian bool
-	msgParser    *MsgParser
+	Parser IParser
 }
 
 func (client *Client) Start() {
@@ -64,11 +59,11 @@ func (client *Client) init() {
 	client.conns = make(ConnSet)
 	client.closeFlag = false
 
-	// msg parser
-	msgParser := NewMsgParser()
-	msgParser.SetMsgLen(client.LenMsgLen, client.MinMsgLen, client.MaxMsgLen)
-	msgParser.SetByteOrder(client.LittleEndian)
-	client.msgParser = msgParser
+	if client.Parser == nil {
+		// msg parser
+		msgParser := NewDefaultMsgParser()
+		client.Parser = msgParser
+	}
 }
 
 func (client *Client) dial() net.Conn {
@@ -102,7 +97,7 @@ reconnect:
 	client.conns[conn] = struct{}{}
 	client.Unlock()
 
-	tcpConn := newTCPConn(conn, client.PendingWriteNum, client.msgParser)
+	tcpConn := newTCPConn(conn, client.PendingWriteNum, client.Parser)
 	agent := client.NewAgent(tcpConn)
 	agent.Run()
 
