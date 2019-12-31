@@ -35,6 +35,7 @@ type Client struct {
 	closeFlag bool
 	writeChan chan []byte
 	conn      *net.UDPConn
+	wg        *sync.WaitGroup
 }
 
 func (client *Client) Start() error {
@@ -48,6 +49,7 @@ func (client *Client) Start() error {
 		client.BufferSize = 100
 	}
 	client.writeChan = make(chan []byte, client.BufferSize)
+	client.wg = &sync.WaitGroup{}
 	if client.Processor == nil {
 		log.Fatal("udp client no processor registered!")
 	}
@@ -56,6 +58,7 @@ func (client *Client) Start() error {
 	if client.conn == nil {
 		return InitError
 	}
+	client.wg.Add(1)
 	go func() {
 		for b := range client.writeChan {
 			if b == nil {
@@ -72,6 +75,7 @@ func (client *Client) Start() error {
 				count--
 			}
 		}
+		client.wg.Done()
 	}()
 	return nil
 }
@@ -137,6 +141,7 @@ func (client *Client) Close() {
 	}
 	client.writeChan <- nil
 	client.closeFlag = true
+	client.wg.Wait()
 }
 
 func (client *Client) Destroy() {

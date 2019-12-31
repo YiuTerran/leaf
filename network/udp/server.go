@@ -19,19 +19,19 @@ type MsgInfo struct {
 }
 
 type Server struct {
-	sync.Mutex
 	Addr       string
 	BufferSize int
 	Processor  processor.Processor
 	MaxTry     int
 
-	closeFlag bool
 	readChan  chan *MsgInfo
 	writeChan chan *MsgInfo
 	conn      net.PacketConn
+	wg        *sync.WaitGroup
+	closeSig  chan struct{}
 }
 
-func (server *Server) Start() {
+func (server *Server) Start(closeSig chan struct{}) {
 	conn, err := net.ListenPacket("udp", server.Addr)
 	if err != nil {
 		log.Fatal("fail to bind udp port:%v", err)
@@ -44,10 +44,12 @@ func (server *Server) Start() {
 	}
 	server.writeChan = make(chan *MsgInfo, server.BufferSize)
 	server.readChan = make(chan *MsgInfo, server.BufferSize)
+	server.closeSig = closeSig
 	server.conn = conn
 	go server.listen()
 	go server.doWrite()
 	go server.doRead()
+	server.wg.Add(3)
 }
 
 func (server *Server) doWrite() {
@@ -66,17 +68,13 @@ func (server *Server) doWrite() {
 			}
 		}
 	}
-
-	_ = server.conn.Close()
-	server.Lock()
-	server.closeFlag = true
-	server.Unlock()
+	server.wg.Done()
 }
 
 func (server *Server) doRead() {
 	for b := range server.readChan {
 		if b == nil {
-			return
+			break
 		}
 		msg, err := server.Processor.Unmarshal(b.Msg)
 		if err != nil {
@@ -92,42 +90,41 @@ func (server *Server) doRead() {
 			continue
 		}
 	}
+	server.wg.Done()
 }
 
 func (server *Server) listen() {
 	for {
-		buffer := make([]byte, DefaultPacketSize)
-		n, addr, err := server.conn.ReadFrom(buffer)
-		if err != nil {
-			log.Error("fail to doRead udp msg:%v", err)
-			continue
-		}
-		if len(server.readChan) == cap(server.readChan) {
-			log.Error("doRead chan full, drop msg from %v", addr)
-			continue
-		}
-		server.readChan <- &MsgInfo{
-			Addr: addr,
-			Msg:  buffer[:n],
+		select {
+		case <-server.closeSig:
+			server.writeChan <- nil
+			server.readChan <- nil
+			server.wg.Done()
+			return
+		default:
+			buffer := make([]byte, DefaultPacketSize)
+			n, addr, err := server.conn.ReadFrom(buffer)
+			if err != nil {
+				log.Error("fail to doRead udp msg:%v", err)
+				continue
+			}
+			if len(server.readChan) == cap(server.readChan) {
+				log.Error("doRead chan full, drop msg from %v", addr)
+				continue
+			}
+			server.readChan <- &MsgInfo{
+				Addr: addr,
+				Msg:  buffer[:n],
+			}
 		}
 	}
 }
 
-func (server *Server) Close() {
-	server.Lock()
-	defer server.Unlock()
-	if server.closeFlag {
-		return
-	}
-	server.writeChan <- nil
-	server.readChan <- nil
-	server.closeFlag = true
+func (server *Server) WaitClosed() {
+	server.wg.Wait()
 }
 
 func (server *Server) Destroy() {
-	server.Lock()
-	defer server.Unlock()
 	close(server.readChan)
 	close(server.writeChan)
-	server.closeFlag = true
 }
