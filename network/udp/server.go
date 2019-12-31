@@ -123,8 +123,3 @@ func (server *Server) listen() {
 func (server *Server) WaitClosed() {
 	server.wg.Wait()
 }
-
-func (server *Server) Destroy() {
-	close(server.readChan)
-	close(server.writeChan)
-}
