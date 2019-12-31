@@ -3,11 +3,9 @@ package udp
 import (
 	"net"
 	"sync"
-	"time"
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
-	"golang.org/x/xerrors"
 )
 
 //udp是无连接的，直接将字节流读入读出即可
@@ -16,84 +14,123 @@ import (
 //另外，由于MTU的限制，UDP的长度最好在512字节之内（参考http://dwz.win/vN5)
 //所以UDP这里的设计直接把processor嵌入进去了，每次发送和接收都是独立的，不过设置了发送缓冲区
 
-const (
-	MaxPacketSize     = 65507
-	DefaultPacketSize = 1024
-)
-
-var (
-	ChanFullError = xerrors.New("write chan full")
-	InitError     = xerrors.New("fail to init")
-)
-
 type Client struct {
-	sync.Mutex
-	Addr       string
+	sync.RWMutex
+	ServerAddr string
 	BufferSize int
 	MaxTry     int //最多尝试次数
 	Processor  processor.Processor
-	Timeout    time.Duration
+	CloseSig   chan struct{}
 
-	closeFlag bool
 	writeChan chan []byte
+	readChan  chan []byte
 	conn      *net.UDPConn
 	wg        *sync.WaitGroup
+	closeFlag bool
 }
 
 func (client *Client) Start() error {
 	client.Lock()
 	defer client.Unlock()
 	client.closeFlag = false
+
 	if client.MaxTry <= 0 {
 		client.MaxTry = 3
 	}
 	if client.BufferSize <= 0 {
 		client.BufferSize = 100
 	}
-	client.writeChan = make(chan []byte, client.BufferSize)
-	client.wg = &sync.WaitGroup{}
 	if client.Processor == nil {
 		log.Fatal("udp client no processor registered!")
 	}
+	client.writeChan = make(chan []byte, client.BufferSize)
+	client.readChan = make(chan []byte, client.BufferSize)
+	client.wg = &sync.WaitGroup{}
 
 	client.conn = client.dial()
 	if client.conn == nil {
 		return InitError
 	}
-	client.wg.Add(1)
-	go func() {
-		for b := range client.writeChan {
-			if b == nil {
-				break
-			}
-			count := client.MaxTry
-			for count > 0 {
-				_, err := client.conn.Write(b)
-				if err != nil {
-					log.Error("fail to write udp chan:%+v", err)
-				} else {
-					break
-				}
-				count--
-			}
-		}
-		client.wg.Done()
-	}()
+	go client.doWrite()
+	go client.listen()
+	go client.doRead()
+	client.wg.Add(3)
 	return nil
 }
 
+func (client *Client) listen() {
+	for {
+		select {
+		case <-client.CloseSig:
+			client.readChan <- nil
+			client.writeChan <- nil
+			client.Lock()
+			client.closeFlag = true
+			client.Unlock()
+			client.wg.Done()
+			return
+		default:
+			buffer := make([]byte, DefaultPacketSize)
+			n, err := client.conn.Read(buffer)
+			if err != nil {
+				continue
+			}
+			buffer = buffer[:n]
+			client.readChan <- buffer
+		}
+	}
+}
+
+func (client *Client) doWrite() {
+	for b := range client.writeChan {
+		if b == nil {
+			break
+		}
+		count := client.MaxTry
+		for count > 0 {
+			_, err := client.conn.Write(b)
+			if err != nil {
+				log.Error("fail to write udp chan:%+v", err)
+			} else {
+				break
+			}
+			count--
+		}
+	}
+	client.wg.Done()
+}
+
+func (client *Client) doRead() {
+	for b := range client.readChan {
+		if b == nil {
+			break
+		}
+		msg, err := client.Processor.Unmarshal(b)
+		if err != nil {
+			log.Error("unable to unmarshal udp msg, ignore")
+			continue
+		}
+		err = client.Processor.Route(msg, client)
+		if err != nil {
+			log.Error("fail to route udp msg:%v", err)
+			continue
+		}
+	}
+	client.wg.Done()
+}
+
 func (client *Client) dial() *net.UDPConn {
-	rAddr, err := net.ResolveUDPAddr("udp", client.Addr)
+	rAddr, err := net.ResolveUDPAddr("udp", client.ServerAddr)
 	if err != nil {
-		log.Error("fail to resolve add for udp:%v", client.Addr)
+		log.Error("fail to resolve add for udp:%v", client.ServerAddr)
 		return nil
 	}
 	conn, err := net.DialUDP("udp", nil, rAddr)
-	if err == nil || client.closeFlag {
+	if err == nil {
 		return conn
 	}
 
-	log.Error("connect to %v error: %v", client.Addr, err)
+	log.Error("connect to %v error: %v", client.ServerAddr, err)
 	return nil
 }
 
@@ -102,40 +139,16 @@ func (client *Client) WriteMsg(msg interface{}) error {
 	if err != nil {
 		return err
 	}
-	client.Lock()
-	defer client.Unlock()
+	client.RLock()
+	defer client.RUnlock()
 	if client.closeFlag {
 		return nil
 	}
 	if len(client.writeChan) == cap(client.writeChan) {
 		return ChanFullError
 	}
-	l := 0
-	for i := 0; i < len(args); i++ {
-		l += len(args[i])
-	}
-	bytes := make([]byte, l)
-	l = 0
-	for i := 0; i < len(args); i++ {
-		copy(bytes[l:], args[i])
-		l += len(args[i])
-	}
-	client.writeChan <- bytes
+	client.writeChan <- MergeBytes(args)
 	return nil
-}
-
-func (client *Client) ReadMsg() (interface{}, error) {
-	buffer := make([]byte, DefaultPacketSize)
-	if client.Timeout > 0 {
-		_ = client.conn.SetDeadline(time.Now().Add(client.Timeout))
-	}
-	n, err := client.conn.Read(buffer)
-	if err != nil {
-		return nil, err
-	}
-	buffer = buffer[:n]
-	msg, err := client.Processor.Unmarshal(buffer)
-	return msg, err
 }
 
 func (client *Client) Close() {

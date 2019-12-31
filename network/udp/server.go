@@ -8,7 +8,7 @@ import (
 	"github.com/YiuTerran/leaf/processor"
 )
 
-type ClientInfo struct {
+type ReceivedContext struct {
 	Addr   net.Addr
 	Server *Server
 }
@@ -23,15 +23,15 @@ type Server struct {
 	BufferSize int
 	Processor  processor.Processor
 	MaxTry     int
+	CloseSig   chan struct{}
 
 	readChan  chan *MsgInfo
 	writeChan chan *MsgInfo
 	conn      net.PacketConn
 	wg        *sync.WaitGroup
-	closeSig  chan struct{}
 }
 
-func (server *Server) Start(closeSig chan struct{}) {
+func (server *Server) Start() {
 	conn, err := net.ListenPacket("udp", server.Addr)
 	if err != nil {
 		log.Fatal("fail to bind udp port:%v", err)
@@ -44,12 +44,26 @@ func (server *Server) Start(closeSig chan struct{}) {
 	}
 	server.writeChan = make(chan *MsgInfo, server.BufferSize)
 	server.readChan = make(chan *MsgInfo, server.BufferSize)
-	server.closeSig = closeSig
 	server.conn = conn
 	go server.listen()
 	go server.doWrite()
 	go server.doRead()
 	server.wg.Add(3)
+}
+
+func (server *Server) WriteMsg(msg interface{}, addr net.Addr) error {
+	if len(server.writeChan) == cap(server.writeChan) {
+		return ChanFullError
+	}
+	if bs, err := server.Processor.Marshal(msg); err != nil {
+		return err
+	} else {
+		server.writeChan <- &MsgInfo{
+			Addr: addr,
+			Msg:  MergeBytes(bs),
+		}
+	}
+	return nil
 }
 
 func (server *Server) doWrite() {
@@ -81,7 +95,7 @@ func (server *Server) doRead() {
 			log.Error("fail to decode udp msg:%v", err)
 			continue
 		}
-		err = server.Processor.Route(msg, &ClientInfo{
+		err = server.Processor.Route(msg, &ReceivedContext{
 			Addr:   b.Addr,
 			Server: server,
 		})
@@ -96,7 +110,7 @@ func (server *Server) doRead() {
 func (server *Server) listen() {
 	for {
 		select {
-		case <-server.closeSig:
+		case <-server.CloseSig:
 			server.writeChan <- nil
 			server.readChan <- nil
 			server.wg.Done()
