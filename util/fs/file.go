@@ -13,6 +13,7 @@ func GetLastModifyTime(path string) (ts int64, err error) {
 	if f, err = os.Open(path); err == nil {
 		if fi, err = f.Stat(); err == nil {
 			ts = fi.ModTime().Unix()
+			_ = f.Close()
 		}
 	}
 	return
