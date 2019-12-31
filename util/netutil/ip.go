@@ -10,6 +10,18 @@ import (
 	"net/http"
 )
 
+func NetAddr2IPPort(addr net.Addr) (ip string, port int) {
+	switch addr := addr.(type) {
+	case *net.UDPAddr:
+		ip = addr.IP.String()
+		port = addr.Port
+	case *net.TCPAddr:
+		ip = addr.IP.String()
+		port = addr.Port
+	}
+	return
+}
+
 func GetOutboundIP() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {

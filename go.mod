@@ -5,8 +5,10 @@ go 1.13
 require (
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.1
+	github.com/k0kubun/pp v3.0.1+incompatible // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.2.0+incompatible
 	github.com/lestrrat-go/strftime v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/pkg/errors v0.8.1
 	go.uber.org/zap v1.12.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
