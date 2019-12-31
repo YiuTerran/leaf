@@ -3,6 +3,7 @@ package udp
 import (
 	"net"
 	"sync"
+	"time"
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
@@ -31,6 +32,7 @@ type Client struct {
 	BufferSize int
 	MaxTry     int //最多尝试次数
 	Processor  processor.Processor
+	Timeout    time.Duration
 
 	closeFlag bool
 	writeChan chan []byte
@@ -124,6 +126,9 @@ func (client *Client) WriteMsg(msg interface{}) error {
 
 func (client *Client) ReadMsg() (interface{}, error) {
 	buffer := make([]byte, DefaultPacketSize)
+	if client.Timeout > 0 {
+		_ = client.conn.SetDeadline(time.Now().Add(client.Timeout))
+	}
 	n, err := client.conn.Read(buffer)
 	if err != nil {
 		return nil, err
