@@ -17,11 +17,11 @@ type Client struct {
 	PendingWriteNum int
 	AutoReconnect   bool
 	NewAgent        func(*Conn) network.Agent
+	Parser IParser
+
 	conns           ConnSet
 	wg              sync.WaitGroup
 	closeFlag       bool
-	// msg parser
-	Parser IParser
 }
 
 func (client *Client) Start() {
@@ -61,7 +61,7 @@ func (client *Client) init() {
 
 	if client.Parser == nil {
 		// msg parser
-		msgParser := NewDefaultMsgParser()
+		msgParser := NewDefaultParser()
 		client.Parser = msgParser
 	}
 }
@@ -73,7 +73,7 @@ func (client *Client) dial() net.Conn {
 			return conn
 		}
 
-		log.Info("connect to %v error: %v", client.Addr, err)
+		log.Error("connect to %v error: %v", client.Addr, err)
 		time.Sleep(client.ConnectInterval)
 		continue
 	}

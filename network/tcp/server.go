@@ -52,7 +52,7 @@ func (server *Server) init() {
 
 	// msg parser
 	if server.Parser == nil {
-		msgParser := NewDefaultMsgParser()
+		msgParser := NewDefaultParser()
 		server.Parser = msgParser
 	}
 }

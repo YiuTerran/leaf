@@ -20,7 +20,7 @@ type Agent interface {
 
 type agent struct {
 	conn     network.Conn
-	gate     *Gate
+	gate     IGate
 	userData interface{}
 }
 
@@ -32,13 +32,13 @@ func (a *agent) Run() {
 			break
 		}
 
-		if a.gate.Processor != nil {
-			msg, err := a.gate.Processor.Unmarshal(data)
+		if a.gate.Processor() != nil {
+			msg, err := a.gate.Processor().Unmarshal(data)
 			if err != nil {
 				log.Debug("unmarshal message error: %v", err)
 				break
 			}
-			err = a.gate.Processor.Route(msg, a)
+			err = a.gate.Processor().Route(msg, a)
 			if err != nil {
 				log.Debug("route message error: %v", err)
 				break
@@ -48,8 +48,8 @@ func (a *agent) Run() {
 }
 
 func (a *agent) OnClose() {
-	if a.gate.AgentChanRPC != nil {
-		err := a.gate.AgentChanRPC.Call0(AgentBeforeCloseEvent, a)
+	if a.gate.AgentChanRPC() != nil {
+		err := a.gate.AgentChanRPC().Call0(AgentBeforeCloseEvent, a)
 		if err != nil {
 			log.Error("chanrpc error: %v", err)
 		}
@@ -57,8 +57,8 @@ func (a *agent) OnClose() {
 }
 
 func (a *agent) WriteMsg(msg interface{}) {
-	if a.gate.Processor != nil {
-		data, err := a.gate.Processor.Marshal(msg)
+	if a.gate.Processor() != nil {
+		data, err := a.gate.Processor().Marshal(msg)
 		if err != nil {
 			log.Error("marshal message %v error: %v", reflect.TypeOf(msg), err)
 			return
