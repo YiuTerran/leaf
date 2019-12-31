@@ -48,7 +48,7 @@ func (client *Client) init() {
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
+		log.Info("invalid BufferSize, reset to %v", client.PendingWriteNum)
 	}
 	if client.MaxMsgLen <= 0 {
 		client.MaxMsgLen = 4096

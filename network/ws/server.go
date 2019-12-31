@@ -107,7 +107,7 @@ func (server *Server) Start() {
 	}
 	if server.PendingWriteNum <= 0 {
 		server.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum, reset to %v", server.PendingWriteNum)
+		log.Info("invalid BufferSize, reset to %v", server.PendingWriteNum)
 	}
 	if server.MaxMsgLen <= 0 {
 		server.MaxMsgLen = 4096

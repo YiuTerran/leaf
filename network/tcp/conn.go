@@ -17,7 +17,7 @@ type Conn struct {
 	parser    IParser
 }
 
-func newTCPConn(conn net.Conn, pendingWriteNum int, parser IParser) *Conn {
+func newConn(conn net.Conn, pendingWriteNum int, parser IParser) *Conn {
 	tcpConn := new(Conn)
 	tcpConn.conn = conn
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
@@ -31,6 +31,7 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, parser IParser) *Conn {
 
 			_, err := conn.Write(b)
 			if err != nil {
+				log.Error("fail to write tcp chan:%+v", err)
 				break
 			}
 		}
@@ -44,71 +45,71 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, parser IParser) *Conn {
 	return tcpConn
 }
 
-func (tcpConn *Conn) doDestroy() {
-	_ = tcpConn.conn.(*net.TCPConn).SetLinger(0)
-	_ = tcpConn.conn.Close()
+func (c *Conn) doDestroy() {
+	_ = c.conn.(*net.TCPConn).SetLinger(0)
+	_ = c.conn.Close()
 
-	if !tcpConn.closeFlag {
-		close(tcpConn.writeChan)
-		tcpConn.closeFlag = true
+	if !c.closeFlag {
+		close(c.writeChan)
+		c.closeFlag = true
 	}
 }
 
-func (tcpConn *Conn) Destroy() {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
+func (c *Conn) Destroy() {
+	c.Lock()
+	defer c.Unlock()
 
-	tcpConn.doDestroy()
+	c.doDestroy()
 }
 
-func (tcpConn *Conn) Close() {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
-	if tcpConn.closeFlag {
+func (c *Conn) Close() {
+	c.Lock()
+	defer c.Unlock()
+	if c.closeFlag {
 		return
 	}
 
-	tcpConn.doWrite(nil)
-	tcpConn.closeFlag = true
+	c.doWrite(nil)
+	c.closeFlag = true
 }
 
-func (tcpConn *Conn) doWrite(b []byte) {
-	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) {
+func (c *Conn) doWrite(b []byte) {
+	if len(c.writeChan) == cap(c.writeChan) {
 		log.Debug("close conn: channel full")
-		tcpConn.doDestroy()
+		c.doDestroy()
 		return
 	}
 
-	tcpConn.writeChan <- b
+	c.writeChan <- b
 }
 
 // b must not be modified by the others goroutines
-func (tcpConn *Conn) Write(b []byte) {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
-	if tcpConn.closeFlag || b == nil {
+func (c *Conn) Write(b []byte) {
+	c.Lock()
+	defer c.Unlock()
+	if c.closeFlag || b == nil {
 		return
 	}
 
-	tcpConn.doWrite(b)
+	c.doWrite(b)
 }
 
-func (tcpConn *Conn) Read(b []byte) (int, error) {
-	return tcpConn.conn.Read(b)
+func (c *Conn) Read(b []byte) (int, error) {
+	return c.conn.Read(b)
 }
 
-func (tcpConn *Conn) LocalAddr() net.Addr {
-	return tcpConn.conn.LocalAddr()
+func (c *Conn) LocalAddr() net.Addr {
+	return c.conn.LocalAddr()
 }
 
-func (tcpConn *Conn) RemoteAddr() net.Addr {
-	return tcpConn.conn.RemoteAddr()
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
 }
 
-func (tcpConn *Conn) ReadMsg() ([]byte, error) {
-	return tcpConn.parser.Read(tcpConn)
+func (c *Conn) ReadMsg() ([]byte, error) {
+	return c.parser.Read(c)
 }
 
-func (tcpConn *Conn) WriteMsg(args ...[]byte) error {
-	return tcpConn.parser.Write(tcpConn, args...)
+func (c *Conn) WriteMsg(args ...[]byte) error {
+	return c.parser.Write(c, args...)
 }

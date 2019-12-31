@@ -32,16 +32,14 @@ func (server *Server) Start() {
 func (server *Server) init() {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Fatal("fail to start tcp server:%v", err)
 	}
 
 	if server.MaxConnNum <= 0 {
 		server.MaxConnNum = 100
-		log.Info("invalid MaxConnNum, reset to %v", server.MaxConnNum)
 	}
 	if server.PendingWriteNum <= 0 {
 		server.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum, reset to %v", server.PendingWriteNum)
 	}
 	if server.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
@@ -94,7 +92,7 @@ func (server *Server) run() {
 
 		server.wgConns.Add(1)
 
-		tcpConn := newTCPConn(conn, server.PendingWriteNum, server.Parser)
+		tcpConn := newConn(conn, server.PendingWriteNum, server.Parser)
 		agent := server.NewAgent(tcpConn)
 		go func() {
 			agent.Run()

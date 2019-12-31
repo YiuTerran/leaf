@@ -47,7 +47,7 @@ func (client *Client) init() {
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
+		log.Info("invalid BufferSize, reset to %v", client.PendingWriteNum)
 	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
@@ -97,7 +97,7 @@ reconnect:
 	client.conns[conn] = struct{}{}
 	client.Unlock()
 
-	tcpConn := newTCPConn(conn, client.PendingWriteNum, client.Parser)
+	tcpConn := newConn(conn, client.PendingWriteNum, client.Parser)
 	agent := client.NewAgent(tcpConn)
 	agent.Run()
 

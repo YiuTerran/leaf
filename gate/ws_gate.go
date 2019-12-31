@@ -16,7 +16,7 @@ type WebsocketGate struct {
 	MsgProcessor    processor.Processor
 	RPCServer       *chanrpc.Server
 
-	WSAddr      string
+	Addr        string
 	HTTPTimeout time.Duration
 	CertFile    string
 	KeyFile     string
@@ -32,9 +32,9 @@ func (gate *WebsocketGate) AgentChanRPC() *chanrpc.Server {
 
 func (gate *WebsocketGate) Run(closeSig chan struct{}) {
 	var wsServer *ws.Server
-	if gate.WSAddr != "" {
+	if gate.Addr != "" {
 		wsServer = new(ws.Server)
-		wsServer.Addr = gate.WSAddr
+		wsServer.Addr = gate.Addr
 		wsServer.MaxConnNum = gate.MaxConnNum
 		wsServer.PendingWriteNum = gate.PendingWriteNum
 		wsServer.MaxMsgLen = gate.MaxMsgLen

@@ -7,7 +7,8 @@ import (
 	"math"
 )
 
-// --------------
+// 一个默认的二进制解析器，即leaf自带的实现
+//--------------
 // | len | data |
 // --------------
 type DefaultBinaryParser struct {
