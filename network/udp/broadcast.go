@@ -6,15 +6,16 @@ import (
 )
 
 //广播客户端
-type Broadcast struct {
+//广播的服务端其实就是普通的服务端
+type BroadcastClient struct {
 	Target string
 	Port   int
 }
 
 //一个同步的广播
-func (broadcast *Broadcast) Broad(msg []byte, callback func([]byte, net.Addr), timeout time.Duration) error {
+func (bcc *BroadcastClient) Broad(msg []byte, callback func([]byte, net.Addr), timeout time.Duration) error {
 	src := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
-	dst := &net.UDPAddr{IP: net.ParseIP(broadcast.Target), Port: broadcast.Port}
+	dst := &net.UDPAddr{IP: net.ParseIP(bcc.Target), Port: bcc.Port}
 	conn, err := net.ListenUDP("udp", src)
 	if err != nil {
 		return err
@@ -26,14 +27,15 @@ func (broadcast *Broadcast) Broad(msg []byte, callback func([]byte, net.Addr), t
 	}
 	var addr net.Addr
 	data := make([]byte, DefaultPacketSize)
-	if err = conn.SetDeadline(time.Now().Add(timeout)); err != nil {
-		return err
+	ch := time.After(timeout)
+	for {
+		select {
+		case <-ch:
+			return nil
+		default:
+			if n, addr, err = conn.ReadFrom(data); err == nil {
+				callback(data[:n], addr)
+			}
+		}
 	}
-	n, addr, err = conn.ReadFrom(data)
-	if err == nil {
-		callback(data[:n], addr)
-	} else {
-		return err
-	}
-	return nil
 }
