@@ -6,6 +6,7 @@ import (
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
+	"github.com/YiuTerran/leaf/util/netutil"
 )
 
 //udp是无连接的，直接将字节流读入读出即可
@@ -147,7 +148,7 @@ func (client *Client) WriteMsg(msg interface{}) error {
 	if len(client.writeChan) == cap(client.writeChan) {
 		return ChanFullError
 	}
-	client.writeChan <- MergeBytes(args)
+	client.writeChan <- netutil.MergeBytes(args)
 	return nil
 }
 

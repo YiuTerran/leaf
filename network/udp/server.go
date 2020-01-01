@@ -6,6 +6,7 @@ import (
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
+	"github.com/YiuTerran/leaf/util/netutil"
 )
 
 type ReceivedContext struct {
@@ -60,7 +61,7 @@ func (server *Server) WriteMsg(msg interface{}, addr net.Addr) error {
 	} else {
 		server.writeChan <- &MsgInfo{
 			Addr: addr,
-			Msg:  MergeBytes(bs),
+			Msg:  netutil.MergeBytes(bs),
 		}
 	}
 	return nil
