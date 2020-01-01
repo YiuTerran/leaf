@@ -25,6 +25,9 @@ func (bcc *BroadcastClient) Broad(msg []byte, callback func([]byte, net.Addr), t
 	if err != nil {
 		return err
 	}
+	if callback == nil {
+		return nil
+	}
 	var addr net.Addr
 	data := make([]byte, DefaultPacketSize)
 	ch := time.After(timeout)
