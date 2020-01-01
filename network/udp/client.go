@@ -160,6 +160,10 @@ func (client *Client) Close() {
 	}
 	client.writeChan <- nil
 	client.closeFlag = true
+}
+
+func (client *Client) CloseAndWait() {
+	client.Close()
 	client.wg.Wait()
 }
 
