@@ -34,29 +34,32 @@ func NewClient(addr string, processor processor.Processor) *Client {
 	}
 }
 
-//同步请求并等待响应调用回调
-func (c *Client) Request(msg interface{}, callback func(interface{}), timeout time.Duration) error {
+//同步请求并等待响应
+func (c *Client) Request(msg interface{}, timeout time.Duration) (resp interface{}, err error) {
+	if err = c.Push(msg); err != nil {
+		return
+	}
+	if timeout > 0 {
+		_ = c.conn.SetDeadline(time.Now().Add(timeout))
+	}
+	buffer := make([]byte, DefaultPacketSize)
+	var n int
+	n, _, err = c.conn.ReadFromUDP(buffer)
+	if err != nil {
+		return
+	}
+	resp, err = c.processor.Unmarshal(buffer[:n])
+	return
+}
+
+//直接推送，不看结果
+func (c *Client) Push(msg interface{}) error {
 	bs, err := c.processor.Marshal(msg)
 	if err != nil {
 		return err
 	}
 	if _, err = c.conn.WriteToUDP(netutil.MergeBytes(bs), c.serverAddr); err != nil {
 		return err
-	}
-	if callback != nil {
-		if timeout > 0 {
-			_ = c.conn.SetDeadline(time.Now().Add(timeout))
-		}
-		buffer := make([]byte, DefaultPacketSize)
-		n, _, err := c.conn.ReadFromUDP(buffer)
-		if err != nil {
-			return err
-		}
-		m, err := c.processor.Unmarshal(buffer[:n])
-		if err != nil {
-			return err
-		}
-		callback(m)
 	}
 	return nil
 }
