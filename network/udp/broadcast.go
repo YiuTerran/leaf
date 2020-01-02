@@ -8,14 +8,15 @@ import (
 //广播客户端
 //广播的服务端其实就是普通的服务端
 type BroadcastClient struct {
-	Target string
-	Port   int
+	TargetAddr string
+	TargetPort int
+	ListenPort int
 }
 
 //一个同步的广播
 func (bcc *BroadcastClient) Broad(msg []byte, callback func([]byte, net.Addr), timeout time.Duration) error {
-	src := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
-	dst := &net.UDPAddr{IP: net.ParseIP(bcc.Target), Port: bcc.Port}
+	src := &net.UDPAddr{IP: net.IPv4zero, Port: bcc.ListenPort}
+	dst := &net.UDPAddr{IP: net.ParseIP(bcc.TargetAddr), Port: bcc.TargetPort}
 	conn, err := net.ListenUDP("udp", src)
 	if err != nil {
 		return err
