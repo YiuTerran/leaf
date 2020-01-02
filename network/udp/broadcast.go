@@ -30,15 +30,15 @@ func (bcc *BroadcastClient) Broad(msg []byte, callback func([]byte, net.Addr), t
 	}
 	var addr net.Addr
 	data := make([]byte, DefaultPacketSize)
-	ch := time.After(timeout)
+	if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return err
+	}
 	for {
-		select {
-		case <-ch:
-			return nil
-		default:
-			if n, addr, err = conn.ReadFrom(data); err == nil {
-				callback(data[:n], addr)
-			}
+		if n, addr, err = conn.ReadFrom(data); err == nil {
+			callback(data[:n], addr)
+		} else {
+			break
 		}
 	}
+	return nil
 }
