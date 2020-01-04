@@ -15,6 +15,8 @@ var (
 	reloadChannel = make(chan os.Signal, 1)
 )
 
+type GetModules func() map[module.Action][]module.Module
+
 //手动关闭服务
 func CloseServer() {
 	closeChannel <- os.Interrupt
@@ -31,21 +33,21 @@ func ReloadServer() {
 }
 
 //热加载
-func reload(getMods func() []module.Module) {
+func reload(getMods GetModules) {
 	for {
 		sig := <-reloadChannel
 		if sig != syscall.SIGUSR2 {
 			return
 		}
-		module.Register(getMods()...)
+		module.Reload(getMods())
 	}
 }
 
-func Run(consolePort int, getMods func() []module.Module, beforeClose func()) {
+func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	//注意在此之前要调用log.InitLogger
 	log.Info("Leaf %v starting up", version)
 	// module
-	module.Register(getMods()...)
+	module.Reload(getMods())
 	// console
 	console.Init(consolePort)
 	//注册热加载信号

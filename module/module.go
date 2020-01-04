@@ -8,12 +8,18 @@ import (
 )
 
 //leaf的模块，启动时按注册顺序逐个启动
-//模块的版本用于热加载，当程序调用Reload时，leaf重新获取当前需要激活的mod
-//然后和目前正在运行的mod进行比对，如果name不存在则进行激活；
-//如果name存在但是version不一致，需要关闭旧的mod，然后再激活新的
+//模块的版本用于热加载，当程序调用Reload时，leaf重新获取当前需要激活的mod，根据Action执行对应的操作
+
+type Action int
+
+const (
+	New Action = iota
+	Update
+	Delete
+)
+
 type Module interface {
 	Name() string
-	Version() int
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan struct{})
@@ -30,26 +36,34 @@ var (
 	lock sync.Mutex
 )
 
-func Register(mis ...Module) {
+func Reload(actionMds map[Action][]Module) {
 	lock.Lock()
 	defer lock.Unlock()
-	for _, mi := range mis {
-		if old, ok := mods[mi.Name()]; ok {
-			if mi.Version() != old.mi.Version() {
-				log.Warn("module %s version changed, restart", mi.Name())
-				destroyMod(old)
-			} else {
-				log.Debug("ignore module %s register", mi.Name())
-				return
+	for action, mis := range actionMds {
+		//删除模块
+		if action == Update || action == Delete {
+			for _, mi := range mis {
+				if old, ok := mods[mi.Name()]; !ok {
+					log.Info("no active module %s, ignore", mi.Name())
+				} else {
+					destroyMod(old)
+					log.Info("destroy module %s", mi.Name())
+				}
 			}
 		}
-		m := new(module)
-		m.mi = mi
-		m.closeSig = make(chan struct{}, 1)
-		mods[mi.Name()] = m
-		mi.OnInit()
-		m.wg.Add(1)
-		go run(m)
+		//新增模块
+		if action == New || action == Update {
+			for _, mi := range mis {
+				m := new(module)
+				m.mi = mi
+				m.closeSig = make(chan struct{}, 1)
+				mods[mi.Name()] = m
+				mi.OnInit()
+				m.wg.Add(1)
+				go run(m)
+				log.Info("register module %s", mi.Name())
+			}
+		}
 	}
 }
 
