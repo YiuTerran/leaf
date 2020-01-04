@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+
 	"github.com/disintegration/imaging"
 )
 

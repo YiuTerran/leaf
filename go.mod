@@ -3,7 +3,7 @@ module github.com/YiuTerran/leaf
 go 1.13
 
 require (
-	github.com/disintegration/imaging v1.6.2 // indirect
+	github.com/disintegration/imaging v1.6.2
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.1

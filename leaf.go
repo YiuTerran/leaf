@@ -11,38 +11,54 @@ import (
 )
 
 var (
-	c = make(chan os.Signal, 1)
+	closeChannel  = make(chan os.Signal, 1)
+	reloadChannel = make(chan os.Signal, 1)
 )
 
 //手动关闭服务
 func CloseServer() {
-	c <- os.Interrupt
+	closeChannel <- os.Interrupt
 }
 
 //重启服务
 func RestartServer() {
-	c <- syscall.SIGUSR1
+	closeChannel <- syscall.SIGUSR1
 }
 
-func Run(consolePort int, getMods func() []module.Module) {
+//内部热加载
+func ReloadServer() {
+	reloadChannel <- syscall.SIGUSR2
+}
+
+//热加载
+func reload(getMods func() []module.Module) {
+	for {
+		<-reloadChannel
+		module.Register(getMods()...)
+	}
+}
+
+func Run(consolePort int, getMods func() []module.Module, beforeClose func()) {
 	//注意在此之前要调用log.InitLogger
 	log.Info("Leaf %v starting up", version)
-	mods := getMods()
 	// module
-	for i := 0; i < len(mods); i++ {
-		module.Register(mods[i])
-	}
-	module.Init()
+	module.Register(getMods()...)
 	// console
 	console.Init(consolePort)
-	// close
-	signal.Notify(c, os.Interrupt, os.Kill)
-	sig := <-c
+	//注册热加载信号
+	signal.Notify(reloadChannel, syscall.SIGUSR2)
+	go reload(getMods)
+	//关闭&&重启
+	signal.Notify(closeChannel, os.Interrupt, os.Kill, syscall.SIGUSR1)
+	sig := <-closeChannel
+	if beforeClose != nil {
+		beforeClose()
+	}
 	console.Destroy()
 	module.Destroy()
 	if sig == syscall.SIGUSR1 {
 		log.Info("Leaf hot restarting...")
-		Run(consolePort, getMods)
+		Run(consolePort, getMods, beforeClose)
 	} else {
 		log.Info("Leaf closing down (signal: %v)", sig)
 	}
