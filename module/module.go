@@ -20,6 +20,7 @@ const (
 
 type Module interface {
 	Name() string
+	Version() int
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan struct{})
@@ -36,17 +37,32 @@ var (
 	lock sync.Mutex
 )
 
+func CurrentModules() map[string]int {
+	lock.Lock()
+	defer lock.Unlock()
+	resp := make(map[string]int, len(mods))
+	for name, mod := range mods {
+		resp[name] = mod.mi.Version()
+	}
+	return resp
+}
+
 func Reload(actionMds map[Action][]Module) {
 	lock.Lock()
 	defer lock.Unlock()
 	for action, mis := range actionMds {
-		//删除模块
-		if action == Update || action == Delete {
-			for _, mi := range mis {
-				if old, ok := mods[mi.Name()]; !ok {
+		//不管是哪种行为，都要删除旧模块
+		for _, mi := range mis {
+			if old, ok := mods[mi.Name()]; !ok {
+				if action != New {
 					log.Info("no active module %s, ignore", mi.Name())
+				}
+			} else {
+				destroyMod(old)
+				if action == New {
+					log.Warn("register new module but old exists, destroy module %s version:%s",
+						mi.Name(), mi.Version())
 				} else {
-					destroyMod(old)
 					log.Info("destroy module %s", mi.Name())
 				}
 			}
