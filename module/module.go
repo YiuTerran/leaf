@@ -20,7 +20,7 @@ const (
 
 type Module interface {
 	Name() string
-	Version() int
+	Version() string //用于标示module配置是否修改，可以用一些关键的配置hash
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan struct{})
@@ -37,10 +37,10 @@ var (
 	lock sync.Mutex
 )
 
-func CurrentModules() map[string]int {
+func CurrentModules() map[string]string {
 	lock.Lock()
 	defer lock.Unlock()
-	resp := make(map[string]int, len(mods))
+	resp := make(map[string]string, len(mods))
 	for name, mod := range mods {
 		resp[name] = mod.mi.Version()
 	}
