@@ -4,6 +4,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/YiuTerran/leaf/chanrpc"
 	"github.com/YiuTerran/leaf/log"
 )
 
@@ -24,6 +25,7 @@ type Module interface {
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan struct{})
+	RPCServer() *chanrpc.Server //如果module可以接受外来的指令，则必须有一个chanrpc server，否则返回nil即可
 }
 
 type module struct {
