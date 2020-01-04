@@ -27,7 +27,7 @@ type module struct {
 
 var (
 	mods = make(map[string]*module)
-	lock sync.RWMutex
+	lock sync.Mutex
 )
 
 func Register(mis ...Module) {
@@ -64,12 +64,13 @@ func destroyMod(mod *module) {
 	mod.closeSig <- struct{}{}
 	mod.wg.Wait()
 	mod.mi.OnDestroy()
+	delete(mods, mod.mi.Name())
 }
 
 //由于修改了执行逻辑，Destroy这里变得无序，在leaf那边注册一个before close的回调来
 func Destroy() {
-	lock.RLock()
-	defer lock.RUnlock()
+	lock.Lock()
+	defer lock.Unlock()
 	for _, mod := range mods {
 		destroyMod(mod)
 	}

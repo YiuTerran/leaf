@@ -33,7 +33,10 @@ func ReloadServer() {
 //热加载
 func reload(getMods func() []module.Module) {
 	for {
-		<-reloadChannel
+		sig := <-reloadChannel
+		if sig != syscall.SIGUSR2 {
+			return
+		}
 		module.Register(getMods()...)
 	}
 }
@@ -51,9 +54,13 @@ func Run(consolePort int, getMods func() []module.Module, beforeClose func()) {
 	//关闭&&重启
 	signal.Notify(closeChannel, os.Interrupt, os.Kill, syscall.SIGUSR1)
 	sig := <-closeChannel
+	reloadChannel <- sig
 	if beforeClose != nil {
 		beforeClose()
 	}
+	//清理资源，由于加入了热重启功能，很多地方的代码都要修改，尤其是使用了全局变量的地方
+	signal.Stop(reloadChannel)
+	signal.Stop(closeChannel)
 	console.Destroy()
 	module.Destroy()
 	if sig == syscall.SIGUSR1 {

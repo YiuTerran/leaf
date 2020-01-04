@@ -32,6 +32,7 @@ func Init(consolePort int) {
 func Destroy() {
 	if server != nil {
 		server.Close()
+		server = nil
 	}
 }
 
