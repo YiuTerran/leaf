@@ -14,7 +14,8 @@ import (
 type Action int
 
 const (
-	New Action = iota
+	Nothing Action = iota
+	New
 	Update
 	Delete
 )
