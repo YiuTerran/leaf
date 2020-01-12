@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/YiuTerran/leaf/util/fs"
 	rotate "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -78,6 +79,9 @@ func EnableDebug(option bool) {
 //其他的输出到标准输出和标准错误
 func InitLogger(path string) {
 	once.Do(func() {
+		if !fs.Exists(path) && os.Mkdir(path, os.ModePerm) != nil {
+			panic("fail to create log directory")
+		}
 		encoderCfg := zap.NewProductionEncoderConfig()
 		encoderCfg.TimeKey = "@timestamp"
 		encoderCfg.EncodeTime = timeEncoder
