@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/YiuTerran/leaf/util/fs"
 	rotate "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -75,11 +74,23 @@ func EnableDebug(option bool) {
 	}
 }
 
+// 判断所给路径文件/文件夹是否存在=>避免循环依赖fs
+func exists(path string) bool {
+	_, err := os.Stat(path) //os.Stat获取文件信息
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
 //path是一个文件夹路径，自动生成track.json, service.log, err.log
 //其他的输出到标准输出和标准错误
 func InitLogger(path string) {
 	once.Do(func() {
-		if !fs.Exists(path) && os.Mkdir(path, os.ModePerm) != nil {
+		if !exists(path) && os.Mkdir(path, os.ModePerm) != nil {
 			panic("fail to create log directory")
 		}
 		encoderCfg := zap.NewProductionEncoderConfig()
