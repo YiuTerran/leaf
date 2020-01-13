@@ -6,32 +6,39 @@ import (
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
+	"github.com/YiuTerran/leaf/util/leafutil"
 	"github.com/YiuTerran/leaf/util/netutil"
+	"go.uber.org/atomic"
+	"golang.org/x/xerrors"
 )
 
 //这是一个异步的udp客户端，代码和服务端很类似，这里调用了DialUDP，因此视为"有连接的"
 //如果需要做一些同步操作，最好使用Client，而不是这个版本
 
+const (
+	NotInit = 0
+	Inited  = 1
+	Closed  = 2
+)
+
 type AsyncClient struct {
-	sync.RWMutex
 	ServerAddr string
 	BufferSize int
 	MaxTry     int //最多尝试次数
 	Processor  processor.Processor
-	CloseSig   chan struct{}
 
+	closeSig  chan struct{}
 	writeChan chan []byte
 	readChan  chan []byte
 	conn      *net.UDPConn
 	wg        *sync.WaitGroup
-	closeFlag bool
+	status    atomic.Int32
 }
 
 func (client *AsyncClient) Start() error {
-	client.Lock()
-	defer client.Unlock()
-	client.closeFlag = false
-
+	if !client.status.CAS(NotInit, Inited) {
+		return xerrors.New("server inited")
+	}
 	if client.MaxTry <= 0 {
 		client.MaxTry = 3
 	}
@@ -41,6 +48,7 @@ func (client *AsyncClient) Start() error {
 	if client.Processor == nil {
 		log.Fatal("udp client no processor registered!")
 	}
+	client.closeSig = make(chan struct{}, 1)
 	client.writeChan = make(chan []byte, client.BufferSize)
 	client.readChan = make(chan []byte, client.BufferSize)
 	client.wg = &sync.WaitGroup{}
@@ -57,14 +65,12 @@ func (client *AsyncClient) Start() error {
 }
 
 func (client *AsyncClient) listen() {
+	defer leafutil.RecoverFromPanic(nil)
 	for {
 		select {
-		case <-client.CloseSig:
+		case <-client.closeSig:
 			client.readChan <- nil
 			client.writeChan <- nil
-			client.Lock()
-			client.closeFlag = true
-			client.Unlock()
 			client.wg.Done()
 			return
 		default:
@@ -80,6 +86,7 @@ func (client *AsyncClient) listen() {
 }
 
 func (client *AsyncClient) doWrite() {
+	defer leafutil.RecoverFromPanic(nil)
 	for b := range client.writeChan {
 		if b == nil {
 			break
@@ -99,6 +106,7 @@ func (client *AsyncClient) doWrite() {
 }
 
 func (client *AsyncClient) doRead() {
+	defer leafutil.RecoverFromPanic(nil)
 	for b := range client.readChan {
 		if b == nil {
 			break
@@ -137,10 +145,8 @@ func (client *AsyncClient) WriteMsg(msg interface{}) error {
 	if err != nil {
 		return err
 	}
-	client.RLock()
-	defer client.RUnlock()
-	if client.closeFlag {
-		return nil
+	if client.status.Load() == Closed {
+		return xerrors.New("client closed")
 	}
 	if len(client.writeChan) == cap(client.writeChan) {
 		return ChanFullError
@@ -150,13 +156,10 @@ func (client *AsyncClient) WriteMsg(msg interface{}) error {
 }
 
 func (client *AsyncClient) Close() {
-	client.Lock()
-	defer client.Unlock()
-	if client.closeFlag {
+	if !client.status.CAS(Inited, Closed) {
 		return
 	}
-	client.writeChan <- nil
-	client.closeFlag = true
+	client.closeSig <- struct{}{}
 }
 
 func (client *AsyncClient) CloseAndWait() {
@@ -165,11 +168,7 @@ func (client *AsyncClient) CloseAndWait() {
 }
 
 func (client *AsyncClient) Destroy() {
-	client.Lock()
-	defer client.Unlock()
+	client.status.Store(Closed)
 	_ = client.conn.Close()
-	if !client.closeFlag {
-		close(client.writeChan)
-		client.closeFlag = true
-	}
+	close(client.writeChan)
 }

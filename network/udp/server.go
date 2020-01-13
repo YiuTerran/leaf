@@ -25,8 +25,8 @@ type Server struct {
 	BufferSize int
 	Processor  processor.Processor
 	MaxTry     int
-	CloseSig   chan struct{}
 
+	closeSig  chan struct{}
 	readChan  chan *MsgInfo
 	writeChan chan *MsgInfo
 	conn      net.PacketConn
@@ -44,6 +44,7 @@ func (server *Server) Start() {
 	if server.BufferSize <= 0 {
 		server.BufferSize = 100
 	}
+	server.closeSig = make(chan struct{}, 1)
 	server.writeChan = make(chan *MsgInfo, server.BufferSize)
 	server.readChan = make(chan *MsgInfo, server.BufferSize)
 	server.conn = conn
@@ -116,7 +117,7 @@ func (server *Server) listen() {
 	defer leafutil.RecoverFromPanic(nil)
 	for {
 		select {
-		case <-server.CloseSig:
+		case <-server.closeSig:
 			server.writeChan <- nil
 			server.readChan <- nil
 			server.wg.Done()
@@ -140,6 +141,11 @@ func (server *Server) listen() {
 	}
 }
 
-func (server *Server) WaitClosed() {
+func (server *Server) Close() {
+	server.closeSig <- struct{}{}
+}
+
+func (server *Server) CloseAndWait() {
+	server.closeSig <- struct{}{}
 	server.wg.Wait()
 }
