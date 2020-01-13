@@ -6,6 +6,7 @@ import (
 
 	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/processor"
+	"github.com/YiuTerran/leaf/util/leafutil"
 	"github.com/YiuTerran/leaf/util/netutil"
 )
 
@@ -69,6 +70,7 @@ func (server *Server) WriteMsg(msg interface{}, addr net.Addr) error {
 }
 
 func (server *Server) doWrite() {
+	defer leafutil.RecoverFromPanic(nil)
 	for b := range server.writeChan {
 		if b == nil {
 			break
@@ -88,6 +90,7 @@ func (server *Server) doWrite() {
 }
 
 func (server *Server) doRead() {
+	defer leafutil.RecoverFromPanic(nil)
 	for b := range server.readChan {
 		if b == nil {
 			break
@@ -110,6 +113,7 @@ func (server *Server) doRead() {
 }
 
 func (server *Server) listen() {
+	defer leafutil.RecoverFromPanic(nil)
 	for {
 		select {
 		case <-server.CloseSig:
