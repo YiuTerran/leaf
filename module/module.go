@@ -54,8 +54,6 @@ func Reload(actionMds map[Action][]Module) {
 				destroyMod(old)
 				if action == New {
 					log.Warn("register new module but old exists, destroy module %s", mi.Name())
-				} else {
-					log.Info("destroy module %s", mi.Name())
 				}
 			}
 		}
