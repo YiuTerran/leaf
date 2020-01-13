@@ -46,6 +46,7 @@ func (server *Server) Start() {
 	server.writeChan = make(chan *MsgInfo, server.BufferSize)
 	server.readChan = make(chan *MsgInfo, server.BufferSize)
 	server.conn = conn
+	server.wg = &sync.WaitGroup{}
 	go server.listen()
 	go server.doWrite()
 	go server.doRead()
