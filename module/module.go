@@ -69,7 +69,7 @@ func Reload(actionMds map[Action][]Module) {
 				mi.OnInit()
 				m.wg.Add(1)
 				go run(m)
-				log.Info("register module %s", mi.Name())
+				log.Info("module %s registered", mi.Name())
 			}
 		}
 	}
@@ -87,6 +87,7 @@ func destroyMod(mod *module) {
 	mod.wg.Wait()
 	mod.mi.OnDestroy()
 	delete(mods, mod.mi.Name())
+	log.Info("module %s destroyed", mod.mi.Name())
 }
 
 //由于修改了执行逻辑，Destroy这里变得无序，在leaf那边注册一个before close的回调来
