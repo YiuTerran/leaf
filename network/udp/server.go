@@ -142,10 +142,11 @@ func (server *Server) listen() {
 }
 
 func (server *Server) Close() {
+	_ = server.conn.Close()
 	server.closeSig <- struct{}{}
 }
 
 func (server *Server) CloseAndWait() {
-	server.closeSig <- struct{}{}
+	server.Close()
 	server.wg.Wait()
 }

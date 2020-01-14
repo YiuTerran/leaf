@@ -159,6 +159,7 @@ func (client *AsyncClient) Close() {
 	if !client.status.CAS(Inited, Closed) {
 		return
 	}
+	_ = client.conn.Close()
 	client.closeSig <- struct{}{}
 }
 
