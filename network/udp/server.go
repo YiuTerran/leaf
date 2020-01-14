@@ -127,8 +127,10 @@ func (server *Server) listen() {
 			buffer := make([]byte, DefaultPacketSize)
 			n, addr, err := server.conn.ReadFrom(buffer)
 			//这里没有什么特别优雅的处理方案，因为net包没有提供
-			if err != nil && !strings.HasSuffix(err.Error(), "use of closed network connection") {
-				log.Error("fail to doRead udp msg:%v", err)
+			if err != nil {
+				if !strings.HasSuffix(err.Error(), "use of closed network connection") {
+					log.Error("fail to doRead udp msg:%v", err)
+				}
 				continue
 			}
 			if len(server.readChan) == cap(server.readChan) {
