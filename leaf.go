@@ -3,7 +3,6 @@ package leaf
 import (
 	"os"
 	"os/signal"
-	"syscall"
 
 	"github.com/YiuTerran/leaf/console"
 	"github.com/YiuTerran/leaf/log"
@@ -12,7 +11,7 @@ import (
 
 var (
 	closeChannel  = make(chan os.Signal, 1)
-	reloadChannel = make(chan os.Signal, 1)
+	reloadChannel = make(chan *struct{}, 1)
 )
 
 type GetModules func() map[module.Action][]module.Module
@@ -22,22 +21,17 @@ func CloseServer() {
 	closeChannel <- os.Interrupt
 }
 
-//重启服务
-func RestartServer() {
-	closeChannel <- syscall.SIGUSR1
-}
-
 //内部热加载
 func ReloadServer() {
-	reloadChannel <- syscall.SIGUSR2
+	reloadChannel <- &struct{}{}
 }
 
 //热加载
 func reload(getMods GetModules) {
 	for {
 		sig := <-reloadChannel
-		if sig != syscall.SIGUSR2 {
-			return
+		if sig == nil {
+			break
 		}
 		module.Reload(getMods())
 	}
@@ -51,24 +45,17 @@ func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	// console
 	console.Init(consolePort)
 	//注册热加载信号
-	signal.Notify(reloadChannel, syscall.SIGUSR2)
 	go reload(getMods)
 	//关闭&&重启
-	signal.Notify(closeChannel, os.Interrupt, os.Kill, syscall.SIGUSR1)
+	signal.Notify(closeChannel, os.Interrupt, os.Kill)
 	sig := <-closeChannel
-	reloadChannel <- sig
+	reloadChannel <- nil
 	if beforeClose != nil {
 		beforeClose()
 	}
 	//清理资源，由于加入了热重启功能，很多地方的代码都要修改，尤其是使用了全局变量的地方
-	signal.Stop(reloadChannel)
 	signal.Stop(closeChannel)
 	console.Destroy()
 	module.Destroy()
-	if sig == syscall.SIGUSR1 {
-		log.Info("Leaf hot restarting...")
-		Run(consolePort, getMods, beforeClose)
-	} else {
-		log.Info("Leaf closing down (signal: %v)", sig)
-	}
+	log.Info("Leaf closing down", sig)
 }
