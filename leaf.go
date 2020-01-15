@@ -10,30 +10,34 @@ import (
 )
 
 var (
-	closeChannel  = make(chan os.Signal, 1)
-	reloadChannel = make(chan *struct{}, 1)
+	closeChannel    = make(chan os.Signal, 1)
+	internalChannel = make(chan int, 1)
+
+	quitSig   = 1
+	reloadSig = 2
 )
 
 type GetModules func() map[module.Action][]module.Module
 
 //手动关闭服务
 func CloseServer() {
-	closeChannel <- os.Interrupt
+	closeChannel <- os.Kill
 }
 
 //内部热加载
 func ReloadServer() {
-	reloadChannel <- &struct{}{}
+	internalChannel <- reloadSig
 }
 
 //热加载
 func reload(getMods GetModules) {
 	for {
-		sig := <-reloadChannel
-		if sig == nil {
+		sig := <-internalChannel
+		if sig == quitSig {
 			break
+		} else if sig == reloadSig {
+			module.Reload(getMods())
 		}
-		module.Reload(getMods())
 	}
 }
 
@@ -49,11 +53,10 @@ func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	//关闭&&重启
 	signal.Notify(closeChannel, os.Interrupt, os.Kill)
 	sig := <-closeChannel
-	reloadChannel <- nil
+	internalChannel <- quitSig
 	if beforeClose != nil {
 		beforeClose()
 	}
-	//清理资源，由于加入了热重启功能，很多地方的代码都要修改，尤其是使用了全局变量的地方
 	signal.Stop(closeChannel)
 	console.Destroy()
 	module.Destroy()
