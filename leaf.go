@@ -43,7 +43,7 @@ func reload(getMods GetModules) {
 
 func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	//注意在此之前要调用log.InitLogger
-	log.Info("Leaf %v starting up", version)
+	log.Info("Server %v starting up", version)
 	// module
 	module.Reload(getMods())
 	// console
@@ -52,7 +52,7 @@ func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	go reload(getMods)
 	//关闭&&重启
 	signal.Notify(closeChannel, os.Interrupt, os.Kill)
-	sig := <-closeChannel
+	<-closeChannel
 	internalChannel <- quitSig
 	if beforeClose != nil {
 		beforeClose()
@@ -60,5 +60,5 @@ func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	signal.Stop(closeChannel)
 	console.Destroy()
 	module.Destroy()
-	log.Info("Leaf closing down", sig)
+	log.Info("Server closing down")
 }
