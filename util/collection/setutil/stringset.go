@@ -1,14 +1,12 @@
 package setutil
 
-//如果需要通用泛型，可以使用github.com/deckarep/golang-set这个包
-//非goroutine安全
-type Int32Set struct {
-	set map[int32]struct{}
+type StringSet struct {
+	set map[string]struct{}
 }
 
-func NewInt32Set(items ...int32) *Int32Set {
-	d := &Int32Set{
-		set: make(map[int32]struct{}, len(items)),
+func NewStringSet(items ...string) *StringSet {
+	d := &StringSet{
+		set: make(map[string]struct{}, len(items)),
 	}
 	for _, item := range items {
 		d.set[item] = struct{}{}
@@ -16,21 +14,21 @@ func NewInt32Set(items ...int32) *Int32Set {
 	return d
 }
 
-func (d *Int32Set) Add(items ...int32) *Int32Set {
+func (d *StringSet) Add(items ...string) *StringSet {
 	for _, item := range items {
 		d.set[item] = struct{}{}
 	}
 	return d
 }
 
-func (d *Int32Set) Remove(items ...int32) *Int32Set {
+func (d *StringSet) Remove(items ...string) *StringSet {
 	for _, item := range items {
 		delete(d.set, item)
 	}
 	return d
 }
 
-func (d *Int32Set) Contains(items ...int32) bool {
+func (d *StringSet) Contains(items ...string) bool {
 	var ok bool
 	for _, item := range items {
 		if _, ok = d.set[item]; !ok {
@@ -40,13 +38,13 @@ func (d *Int32Set) Contains(items ...int32) bool {
 	return true
 }
 
-func (d *Int32Set) Size() int {
+func (d *StringSet) Size() int {
 	return len(d.set)
 }
 
 //交集
-func (d *Int32Set) Intersect(other *Int32Set) *Int32Set {
-	result := NewInt32Set()
+func (d *StringSet) Intersect(other *StringSet) *StringSet {
+	result := NewStringSet()
 	//遍历较小的那个
 	toRange, another := d.set, other
 	if d.Size() > other.Size() {
@@ -61,8 +59,8 @@ func (d *Int32Set) Intersect(other *Int32Set) *Int32Set {
 }
 
 //并集
-func (d *Int32Set) Union(other *Int32Set) *Int32Set {
-	result := NewInt32Set()
+func (d *StringSet) Union(other *StringSet) *StringSet {
+	result := NewStringSet()
 	for k, v := range d.set {
 		result.set[k] = v
 	}
@@ -73,8 +71,8 @@ func (d *Int32Set) Union(other *Int32Set) *Int32Set {
 }
 
 //差集
-func (d *Int32Set) Difference(other *Int32Set) *Int32Set {
-	result := NewInt32Set()
+func (d *StringSet) Difference(other *StringSet) *StringSet {
+	result := NewStringSet()
 	for k := range d.set {
 		if !other.Contains(k) {
 			result.Add(k)
@@ -83,8 +81,8 @@ func (d *Int32Set) Difference(other *Int32Set) *Int32Set {
 	return result
 }
 
-func (d *Int32Set) ToArray() []int32 {
-	result := make([]int32, 0, d.Size())
+func (d *StringSet) ToArray() []string {
+	result := make([]string, 0, d.Size())
 	for k := range d.set {
 		result = append(result, k)
 	}
