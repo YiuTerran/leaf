@@ -27,3 +27,7 @@ func Compress(data []byte, width int, format imaging.Format) ([]byte, error) {
 func ConvertToBase64(img []byte) string {
 	return base64.StdEncoding.EncodeToString(img)
 }
+
+func ConvertToImage(data string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(data)
+}
