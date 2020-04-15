@@ -1,14 +1,15 @@
 package netutil
 
 import (
-	"github.com/jlaffaye/ftp"
-	"golang.org/x/xerrors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/jlaffaye/ftp"
+	"golang.org/x/xerrors"
 )
 
 func Download(uri string) ([]byte, error) {
@@ -44,7 +45,7 @@ func ftpDownload(uri string) ([]byte, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("fail to parse url:%w", err)
 	}
-	c, err := ftp.Dial(link.Host, ftp.DialWithTimeout(5*time.Second))
+	c, err := ftp.Dial(link.Host, ftp.DialWithTimeout(30*time.Second))
 	if err != nil {
 		return nil, err
 	}
