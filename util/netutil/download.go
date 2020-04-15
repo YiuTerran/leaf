@@ -32,7 +32,8 @@ func DownloadAsFile(uri string, filepath string) error {
 
 func httpDownload(uri string) ([]byte, error) {
 	// Get the data
-	resp, err := http.Get(uri)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(uri)
 	if err != nil {
 		return nil, err
 	}
