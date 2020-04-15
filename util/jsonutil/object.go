@@ -1,6 +1,14 @@
 package jsonutil
 
-import "github.com/pkg/errors"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
+)
 
 //一个动态的json对象
 //注意：json在Unmarshal到interface{}时，会把JsonNumber转成float64，除非使用UseNumber
@@ -15,15 +23,79 @@ var (
 	IndexError = errors.New("index not exist")
 )
 
-func (jm JsonObject) HasKey(key string) bool {
-	if _, ok := jm[key]; ok {
+//自定义序列化
+func (j JsonObject) Value() (driver.Value, error) {
+	return json.Marshal(j)
+}
+
+func (j *JsonObject) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	d := make(map[string]interface{})
+	if err := json.Unmarshal(src.([]byte), &d); err != nil {
+		return err
+	}
+	*j = d
+	return nil
+}
+
+func (j JsonObject) GetInt(key string) (int, error) {
+	if v, ok := j[key]; !ok {
+		return 0, xerrors.Errorf("key not exist")
+	} else {
+		switch v.(type) {
+		case float64:
+			return int(v.(float64)), nil
+		case string:
+			return strconv.Atoi(v.(string))
+		default:
+			return 0, xerrors.Errorf("type error")
+		}
+	}
+}
+
+func (j JsonObject) GetString(key string) (string, error) {
+	if v, ok := j[key]; !ok {
+		return "", xerrors.Errorf("key not exist")
+	} else {
+		switch v.(type) {
+		case string:
+			return v.(string), nil
+		case float64:
+			return fmt.Sprint(v), nil
+		default:
+			return "", xerrors.Errorf("type error")
+		}
+	}
+}
+
+func (j JsonObject) GetStringDefault(key string, def string) string {
+	if v, err := j.GetString(key); err != nil {
+		return def
+	} else {
+		return v
+	}
+}
+
+func (j JsonObject) GetIntDefault(key string, def int) int {
+	v, err := j.GetInt(key)
+	if err == nil {
+		return v
+
+	}
+	return def
+}
+
+func (j JsonObject) HasKey(key string) bool {
+	if _, ok := j[key]; ok {
 		return true
 	}
 	return false
 }
 
-func (jm JsonObject) HasNotNilKey(key string) bool {
-	if tmp, ok := jm[key]; ok {
+func (j JsonObject) HasNotNilKey(key string) bool {
+	if tmp, ok := j[key]; ok {
 		if tmp != nil {
 			return true
 		}
@@ -31,13 +103,13 @@ func (jm JsonObject) HasNotNilKey(key string) bool {
 	return false
 }
 
-func (jm JsonObject) GetFloat64(key string) (float64, error) {
+func (j JsonObject) GetFloat64(key string) (float64, error) {
 	var (
 		tmp  interface{}
 		resp float64
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.(float64); ok {
 			return resp, nil
 		}
@@ -46,13 +118,13 @@ func (jm JsonObject) GetFloat64(key string) (float64, error) {
 	return 0, KeyError
 }
 
-func (jm JsonObject) GetFloat64Default(key string, defaultValue float64) float64 {
+func (j JsonObject) GetFloat64Default(key string, defaultValue float64) float64 {
 	var (
 		tmp  interface{}
 		resp float64
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.(float64); ok {
 			return resp
 		}
@@ -60,42 +132,13 @@ func (jm JsonObject) GetFloat64Default(key string, defaultValue float64) float64
 	return defaultValue
 }
 
-func (jm JsonObject) GetString(key string) (string, error) {
-	var (
-		tmp  interface{}
-		resp string
-		ok   bool
-	)
-	if tmp, ok = jm[key]; ok {
-		if resp, ok = tmp.(string); ok {
-			return resp, nil
-		}
-		return "", TypeError
-	}
-	return "", KeyError
-}
-
-func (jm JsonObject) GetStringDefault(key string, defaultValue string) string {
-	var (
-		tmp  interface{}
-		resp string
-		ok   bool
-	)
-	if tmp, ok = jm[key]; ok {
-		if resp, ok = tmp.(string); ok {
-			return resp
-		}
-	}
-	return defaultValue
-}
-
-func (jm JsonObject) GetBool(key string) (bool, error) {
+func (j JsonObject) GetBool(key string) (bool, error) {
 	var (
 		tmp  interface{}
 		resp bool
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.(bool); ok {
 			return resp, nil
 		}
@@ -104,13 +147,13 @@ func (jm JsonObject) GetBool(key string) (bool, error) {
 	return false, KeyError
 }
 
-func (jm JsonObject) GetBoolDefault(key string, defaultValue bool) bool {
+func (j JsonObject) GetBoolDefault(key string, defaultValue bool) bool {
 	var (
 		tmp  interface{}
 		resp bool
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.(bool); ok {
 			return resp
 		}
@@ -118,13 +161,13 @@ func (jm JsonObject) GetBoolDefault(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func (jm JsonObject) GetJsonArray(key string) (JsonArray, error) {
+func (j JsonObject) GetJsonArray(key string) (JsonArray, error) {
 	var (
 		tmp  interface{}
 		resp []interface{}
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.([]interface{}); ok {
 			return resp, nil
 		}
@@ -133,13 +176,13 @@ func (jm JsonObject) GetJsonArray(key string) (JsonArray, error) {
 	return nil, KeyError
 }
 
-func (jm JsonObject) GetJsonObject(key string) (JsonObject, error) {
+func (j JsonObject) GetJsonObject(key string) (JsonObject, error) {
 	var (
 		tmp  interface{}
 		resp map[string]interface{}
 		ok   bool
 	)
-	if tmp, ok = jm[key]; ok {
+	if tmp, ok = j[key]; ok {
 		if resp, ok = tmp.(map[string]interface{}); ok {
 			return resp, nil
 		}

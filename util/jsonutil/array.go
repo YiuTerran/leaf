@@ -1,6 +1,28 @@
 package jsonutil
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+)
+
 type JsonArray []interface{}
+
+//自定义序列化
+func (ja JsonArray) Value() (driver.Value, error) {
+	return json.Marshal(ja)
+}
+
+func (ja *JsonArray) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	d := make([]interface{}, 0)
+	if err := json.Unmarshal(src.([]byte), &d); err != nil {
+		return err
+	}
+	*ja = d
+	return nil
+}
 
 func (ja JsonArray) ToNumberArray() ([]float64, error) {
 	if ja == nil {
