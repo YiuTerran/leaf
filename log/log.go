@@ -98,7 +98,7 @@ func InitLogger(path string) {
 		encoderCfg.EncodeTime = timeEncoder
 		tracker = zap.New(
 			zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg),
-				zapcore.AddSync(getWriter(filepath.Join(path, "track.log"))),
+				zapcore.AddSync(getWriter(filepath.Join(path, "track"))),
 				zap.InfoLevel))
 		//高优先级
 		hp := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
@@ -112,8 +112,8 @@ func InitLogger(path string) {
 			return lvl > zap.DebugLevel
 		})
 		//都输出到标准输出，方便调试
-		warnWriter = getWriter(filepath.Join(path, "error.log"))
-		infoWriter = getWriter(filepath.Join(path, "service.log"))
+		warnWriter = getWriter(filepath.Join(path, "error"))
+		infoWriter = getWriter(filepath.Join(path, "service"))
 		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 		core := zapcore.NewTee(
 			// 将info及以下写入logPath,  warn及以上写入errPath
@@ -128,9 +128,9 @@ func InitLogger(path string) {
 }
 
 func getWriter(filename string) io.Writer {
-	// 生成rotatelogs的Logger 实际生成的文件名 demo.log.mmdd
+	// 生成rotatelogs的Logger 实际生成的文件名 demo.mmdd.log
 	hook, err := rotate.New(
-		filename+".%m%d",
+		filename+".%m%d.log",
 		rotate.WithLinkName(filename),
 		rotate.WithMaxAge(time.Hour*24*10),    // 保存10天
 		rotate.WithRotationTime(time.Hour*24), //切割频率 24小时
