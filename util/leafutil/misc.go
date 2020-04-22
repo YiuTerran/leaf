@@ -14,24 +14,27 @@ import (
 )
 
 const (
-	configDir = "_config"
+	ConfigDir   = "_config"
+	ResourceDir = "resource"
 )
 
-//约定程序二进制文件和_config文件夹在同一层
-//否则逐层往上找直到找到（方便进行单元测试）
-func GetConfigDir() string {
+//从当前目录逐层往上找直到找到
+func FindDirPath(name string) string {
 	wd, _ := os.Getwd()
 
-	x := filepath.Join(wd, configDir)
+	x := filepath.Join(wd, name)
 	for !fs.Exists(x) {
 		if wd == "/" {
-			log.Fatal("can't find config dir, it should be named `%s`", configDir)
+			log.Error("can't find dir, it should be named `%s`", name)
+			return ""
 		}
 		wd = filepath.Dir(wd)
-		x = filepath.Join(wd, configDir)
+		x = filepath.Join(wd, name)
 	}
 	return x
 }
+
+//约定程序二进制文件和_config文件夹在同一层
 
 type TextDuration struct {
 	time.Duration
