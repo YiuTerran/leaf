@@ -21,7 +21,7 @@ const (
 
 //从当前目录逐层往上找直到找到
 func FindDirPath(name string) string {
-	wd, _ := os.Getwd()
+	wd, _ := os.Executable()
 
 	x := filepath.Join(wd, name)
 	for !fs.Exists(x) {
