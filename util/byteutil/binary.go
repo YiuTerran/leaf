@@ -24,9 +24,9 @@ func BytesToIntString(bs []byte, delim string) string {
 	return byteToString(bs, delim, "%d")
 }
 
-//将字节数组转成16进制组成的字符串（如MAC地址转换）
+//将字节数组转成16进制组成的字符串（如MAC地址转换），强制使用
 func BytesToHexString(bs []byte, delim string) string {
-	return byteToString(bs, delim, "%X")
+	return byteToString(bs, delim, "%02X")
 }
 
 func stringToByte(s string, delim string, base int) []byte {
