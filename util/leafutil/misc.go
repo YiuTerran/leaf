@@ -1,6 +1,7 @@
 package leafutil
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -25,7 +26,11 @@ func FindDirPath(name string) string {
 	x := filepath.Join(wd, name)
 	for !fs.Exists(x) {
 		if wd == "/" {
-			log.Error("can't find dir, it should be named `%s`", name)
+			if log.IsInit() {
+				log.Error("can't find dir, it should be named `%s`", name)
+			} else {
+				panic(fmt.Sprintf("dir %s is not exist!!", name))
+			}
 			return ""
 		}
 		wd = filepath.Dir(wd)

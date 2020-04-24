@@ -5,10 +5,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	rotate "github.com/lestrrat-go/file-rotatelogs"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -22,8 +24,10 @@ var (
 	logger     *zap.SugaredLogger
 	infoWriter io.Writer
 	warnWriter io.Writer
-	debug      = zap.NewAtomicLevelAt(zap.DebugLevel)
 	once       sync.Once
+
+	debug  = zap.NewAtomicLevelAt(zap.DebugLevel)
+	inited = atomic.NewBool(false)
 )
 
 func Debug(format string, a ...interface{}) {
@@ -74,6 +78,10 @@ func EnableDebug(option bool) {
 	}
 }
 
+func IsInit() bool {
+	return inited.Load()
+}
+
 // 判断所给路径文件/文件夹是否存在=>避免循环依赖fs
 func exists(path string) bool {
 	_, err := os.Stat(path) //os.Stat获取文件信息
@@ -112,8 +120,8 @@ func InitLogger(path string) {
 			return lvl > zap.DebugLevel
 		})
 		//都输出到标准输出，方便调试
-		warnWriter = getWriter(filepath.Join(path, "error"))
-		infoWriter = getWriter(filepath.Join(path, "service"))
+		warnWriter = getWriter(filepath.Join(path, "error.log"))
+		infoWriter = getWriter(filepath.Join(path, "service.log"))
 		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 		core := zapcore.NewTee(
 			// 将info及以下写入logPath,  warn及以上写入errPath
@@ -124,11 +132,13 @@ func InitLogger(path string) {
 		)
 		lg := zap.New(core)
 		logger = lg.Sugar()
+		inited.Store(true)
 	})
 }
 
 func getWriter(filename string) io.Writer {
 	// 生成rotatelogs的Logger 实际生成的文件名 demo.mmdd.log
+	filename = strings.Split(filename, ".")[0]
 	hook, err := rotate.New(
 		filename+".%m%d.log",
 		rotate.WithLinkName(filename),
