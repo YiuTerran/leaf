@@ -19,22 +19,24 @@ const (
 	ResourceDir = "resource"
 )
 
-//从当前目录逐层往上找直到找到
-func FindDirPath(name string) string {
-	wd, _ := os.Executable()
-
-	x := filepath.Join(wd, name)
+//从程序所在目录逐层往上找直到找到
+func FindPath(name string) string {
+	dir, _ := os.Executable()
+	root := dir
+	prev := ""
+	x := filepath.Join(dir, name)
 	for !fs.Exists(x) {
-		if wd == "/" {
+		if dir == prev {
 			if log.IsInit() {
-				log.Error("can't find dir, it should be named `%s`", name)
+				log.Error("can't find path from %s, it should be named `%s`", root, name)
 			} else {
-				panic(fmt.Sprintf("dir %s is not exist!!", name))
+				panic(fmt.Sprintf("path %s can't be found from %s!!", name, root))
 			}
 			return ""
 		}
-		wd = filepath.Dir(wd)
-		x = filepath.Join(wd, name)
+		prev = dir
+		dir = filepath.Dir(dir)
+		x = filepath.Join(dir, name)
 	}
 	return x
 }
