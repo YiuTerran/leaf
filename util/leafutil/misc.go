@@ -23,6 +23,9 @@ const (
 func FindPathFrom(root string, name string) string {
 	dir := root
 	prev := ""
+	if root == "" {
+		return FindPath(name)
+	}
 	x := filepath.Join(dir, name)
 	for !fs.Exists(x) {
 		if dir == prev {
