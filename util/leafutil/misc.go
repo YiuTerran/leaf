@@ -19,10 +19,9 @@ const (
 	ResourceDir = "resource"
 )
 
-//从程序所在目录逐层往上找直到找到
-func FindPath(name string) string {
-	dir, _ := os.Executable()
-	root := dir
+//可以在执行go run的时候直接把当前目录当参数传进来，然后在此基础上查找
+func FindPathFrom(root string, name string) string {
+	dir := root
 	prev := ""
 	x := filepath.Join(dir, name)
 	for !fs.Exists(x) {
@@ -39,6 +38,14 @@ func FindPath(name string) string {
 		x = filepath.Join(dir, name)
 	}
 	return x
+}
+
+//从程序所在目录逐层往上找直到找到
+//注意：go run的执行文件在临时目录，一般是(/var/folders/)，这种方法是找不到的
+func FindPath(name string) string {
+	dir, _ := os.Executable()
+	root := dir
+	return FindPathFrom(root, name)
 }
 
 //约定程序二进制文件和_config文件夹在同一层
