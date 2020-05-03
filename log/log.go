@@ -22,6 +22,7 @@ const (
 var (
 	tracker    *zap.Logger
 	logger     *zap.SugaredLogger
+	logPath    string
 	infoWriter io.Writer
 	warnWriter io.Writer
 	once       sync.Once
@@ -53,6 +54,10 @@ func Fatal(format string, a ...interface{}) {
 //输出json的track
 func Track(msg string, fields ...zap.Field) {
 	tracker.Info(msg, fields...)
+}
+
+func GetLogPath() string {
+	return logPath
 }
 
 //辅助函数，Track中使用zap.Any打印Object之前将其转换为原始json
@@ -101,6 +106,7 @@ func InitLogger(path string) {
 		if !exists(path) && os.Mkdir(path, os.ModePerm) != nil {
 			panic("fail to create log directory")
 		}
+		logPath = path
 		encoderCfg := zap.NewProductionEncoderConfig()
 		encoderCfg.TimeKey = "@timestamp"
 		encoderCfg.EncodeTime = timeEncoder
