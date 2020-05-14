@@ -15,6 +15,7 @@ type WsClient struct {
 	MsgProcessor  processor.Processor
 	RPCServer     *chanrpc.Server
 	AutoReconnect bool
+	UserData      interface{}
 }
 
 func (w *WsClient) Processor() processor.Processor {
@@ -35,7 +36,7 @@ func (w *WsClient) Run(closeSig chan struct{}) {
 			NewAgent: func(conn *ws.Conn) network.Agent {
 				a := &agent{conn: conn, gate: w}
 				if w.RPCServer != nil {
-					w.RPCServer.Go(AgentCreatedEvent, a)
+					w.RPCServer.Go(AgentCreatedEvent, a, w.UserData)
 				}
 				return a
 			},

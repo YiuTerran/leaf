@@ -13,6 +13,7 @@ type TcpClient struct {
 	RPCServer     *chanrpc.Server
 	BinaryParser  tcp.IParser
 	AutoReconnect bool
+	UserData      interface{}
 }
 
 func (c *TcpClient) Processor() processor.Processor {
@@ -33,7 +34,7 @@ func (c *TcpClient) Run(closeSig chan struct{}) {
 			NewAgent: func(conn *tcp.Conn) network.Agent {
 				a := &agent{conn: conn, gate: c}
 				if c.RPCServer != nil {
-					c.RPCServer.Go(AgentCreatedEvent, a)
+					c.RPCServer.Go(AgentCreatedEvent, a, c.UserData)
 				}
 				return a
 			},
