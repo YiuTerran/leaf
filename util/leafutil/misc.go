@@ -103,8 +103,8 @@ var (
 	ProtoProcessor = protobuf.NewProcessor()
 )
 
-func NewProtoWsGate(wsAddr string, chanRPC *chanrpc.Server) *gate.WebsocketGate {
-	return &gate.WebsocketGate{
+func NewProtoWsGate(wsAddr string, chanRPC *chanrpc.Server) *gate.WsGate {
+	return &gate.WsGate{
 		MaxConnNum:      MaxConnNum,
 		PendingWriteNum: PendingWriteNum,
 		MaxMsgLen:       MaxMsgLen,

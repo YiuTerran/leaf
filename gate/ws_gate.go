@@ -9,7 +9,7 @@ import (
 	"github.com/YiuTerran/leaf/processor"
 )
 
-type WebsocketGate struct {
+type WsGate struct {
 	MaxConnNum      int
 	PendingWriteNum int
 	MaxMsgLen       uint32
@@ -22,15 +22,15 @@ type WebsocketGate struct {
 	KeyFile     string
 }
 
-func (gate *WebsocketGate) Processor() processor.Processor {
+func (gate *WsGate) Processor() processor.Processor {
 	return gate.MsgProcessor
 }
 
-func (gate *WebsocketGate) AgentChanRPC() *chanrpc.Server {
+func (gate *WsGate) AgentChanRPC() *chanrpc.Server {
 	return gate.RPCServer
 }
 
-func (gate *WebsocketGate) Run(closeSig chan struct{}) {
+func (gate *WsGate) Run(closeSig chan struct{}) {
 	var wsServer *ws.Server
 	if gate.Addr != "" {
 		wsServer = new(ws.Server)
@@ -58,4 +58,4 @@ func (gate *WebsocketGate) Run(closeSig chan struct{}) {
 	}
 }
 
-func (gate *WebsocketGate) OnDestroy() {}
+func (gate *WsGate) OnDestroy() {}
