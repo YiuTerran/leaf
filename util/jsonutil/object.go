@@ -55,6 +55,21 @@ func (j JsonObject) GetInt(key string) (int, error) {
 	}
 }
 
+func (j JsonObject) GetInt64(key string) (int64, error) {
+	if v, ok := j[key]; !ok {
+		return 0, xerrors.Errorf("key not exist")
+	} else {
+		switch v.(type) {
+		case float64:
+			return int64(v.(float64)), nil
+		case string:
+			return strconv.ParseInt(v.(string), 0, 64)
+		default:
+			return 0, xerrors.Errorf("type error")
+		}
+	}
+}
+
 func (j JsonObject) GetString(key string) (string, error) {
 	if v, ok := j[key]; !ok {
 		return "", xerrors.Errorf("key not exist")
@@ -83,6 +98,14 @@ func (j JsonObject) GetIntDefault(key string, def int) int {
 	if err == nil {
 		return v
 
+	}
+	return def
+}
+
+func (j JsonObject) GetInt64Default(key string, def int64) int64 {
+	v, err := j.GetInt64(key)
+	if err == nil {
+		return v
 	}
 	return def
 }
