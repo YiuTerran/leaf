@@ -31,6 +31,8 @@ func (w *WsClient) Run(closeSig chan struct{}) {
 	if w.Server != "" {
 		wsClient = &ws.Client{
 			Addr:             w.Server,
+			ConnNum:          1,
+			ConnectInterval:  3 * time.Second,
 			HandshakeTimeout: w.HttpTimeout,
 			AutoReconnect:    w.AutoReconnect,
 			NewAgent: func(conn *ws.Conn) network.Agent {

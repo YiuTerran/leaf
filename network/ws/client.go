@@ -40,23 +40,23 @@ func (client *Client) init() {
 
 	if client.ConnNum <= 0 {
 		client.ConnNum = 1
-		log.Info("invalid ConnNum, reset to %v", client.ConnNum)
+		log.Debug("invalid ConnNum, reset to %v", client.ConnNum)
 	}
 	if client.ConnectInterval <= 0 {
 		client.ConnectInterval = 3 * time.Second
-		log.Info("invalid ConnectInterval, reset to %v", client.ConnectInterval)
+		log.Debug("invalid ConnectInterval, reset to %v", client.ConnectInterval)
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 100
-		log.Info("invalid BufferSize, reset to %v", client.PendingWriteNum)
+		log.Debug("invalid BufferSize, reset to %v", client.PendingWriteNum)
 	}
 	if client.MaxMsgLen <= 0 {
 		client.MaxMsgLen = 4096
-		log.Info("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
+		log.Debug("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
 	}
 	if client.HandshakeTimeout <= 0 {
 		client.HandshakeTimeout = 10 * time.Second
-		log.Info("invalid HandshakeTimeout, reset to %v", client.HandshakeTimeout)
+		log.Debug("invalid HandshakeTimeout, reset to %v", client.HandshakeTimeout)
 	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
