@@ -93,6 +93,7 @@ func Destroy() {
 	lock.Lock()
 	defer lock.Unlock()
 	for _, mod := range mods {
+		log.Debug("destroying module %s", mod)
 		destroyMod(mod)
 	}
 }
