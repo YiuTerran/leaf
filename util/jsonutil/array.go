@@ -28,7 +28,7 @@ func (ja JsonArray) ToNumberArray() ([]float64, error) {
 	if ja == nil {
 		return nil, TypeError
 	}
-	resp := make([]float64, len(ja))
+	resp := make([]float64, 0, len(ja))
 	var (
 		v   float64
 		err error
@@ -47,7 +47,7 @@ func (ja JsonArray) ToStringArray() ([]string, error) {
 	if ja == nil {
 		return nil, TypeError
 	}
-	resp := make([]string, len(ja))
+	resp := make([]string, 0, len(ja))
 	var (
 		v   string
 		err error
@@ -66,7 +66,7 @@ func (ja JsonArray) ToBoolArray() ([]bool, error) {
 	if ja == nil {
 		return nil, TypeError
 	}
-	resp := make([]bool, len(ja))
+	resp := make([]bool, 0, len(ja))
 	var (
 		v   bool
 		err error
@@ -85,7 +85,7 @@ func (ja JsonArray) ToObjectArray() ([]JsonObject, error) {
 	if ja == nil {
 		return nil, TypeError
 	}
-	resp := make([]JsonObject, len(ja))
+	resp := make([]JsonObject, 0, len(ja))
 	var (
 		v   JsonObject
 		err error
@@ -104,7 +104,7 @@ func (ja JsonArray) ToArrayOfArray() ([]JsonArray, error) {
 	if ja == nil {
 		return nil, TypeError
 	}
-	resp := make([]JsonArray, len(ja))
+	resp := make([]JsonArray, 0, len(ja))
 	var (
 		v   JsonArray
 		err error
