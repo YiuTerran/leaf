@@ -42,21 +42,56 @@ func GetNowTs() int64 {
 	return time.Now().Unix()
 }
 
+//固定频率，不会立刻执行
 func Schedule(what func(), delay time.Duration, stop chan struct{}) {
-	DynamicSchedule(what, &delay, stop)
+	go func() {
+		ticker := time.NewTicker(delay)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				what()
+			case <-stop:
+				return
+			}
+		}
+	}()
 }
 
 func LocalNow() time.Time {
 	return UTCToLocal(time.Now().UTC())
 }
 
-//可以动态修改延迟时间、可关闭的定时器
+//动态频率，不会立刻执行
 func DynamicSchedule(what func(), delayAddr *time.Duration, stop chan struct{}) {
 	go func() {
 		for {
 			select {
 			case <-time.After(*delayAddr):
 				what()
+			case <-stop:
+				return
+			}
+		}
+	}()
+}
+
+//循环，固定延迟时间，会立刻执行一次
+func Cycle(what func(), delay time.Duration, stop chan struct{}) {
+	DynamicCycle(what, &delay, stop)
+}
+
+//循环，动态间隔时间，会立刻执行一次
+func DynamicCycle(what func(), delayAddr *time.Duration, stop chan struct{}) {
+	go func() {
+		timer := time.NewTimer(*delayAddr)
+		defer timer.Stop()
+		for {
+			what()
+			timer.Reset(*delayAddr)
+			select {
+			case <-timer.C:
+				continue
 			case <-stop:
 				return
 			}
