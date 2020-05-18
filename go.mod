@@ -14,6 +14,7 @@ require (
 	github.com/lestrrat-go/strftime v1.0.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/tebeka/strftime v0.1.3 // indirect
+	go.uber.org/atomic v1.5.0
 	go.uber.org/zap v1.12.0
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
