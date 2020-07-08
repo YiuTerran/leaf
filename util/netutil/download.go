@@ -1,6 +1,8 @@
 package netutil
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -9,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jlaffaye/ftp"
-	"golang.org/x/xerrors"
 )
 
 func Download(uri string) ([]byte, error) {
@@ -19,7 +20,7 @@ func Download(uri string) ([]byte, error) {
 	if strings.HasPrefix(uri, "http") {
 		return httpDownload(uri)
 	}
-	return nil, xerrors.New("not support protocol")
+	return nil, errors.New("not support protocol")
 }
 
 func DownloadAsFile(uri string, filepath string) error {
@@ -44,7 +45,7 @@ func httpDownload(uri string) ([]byte, error) {
 func ftpDownload(uri string) ([]byte, error) {
 	link, err := url.Parse(uri)
 	if err != nil {
-		return nil, xerrors.Errorf("fail to parse url:%w", err)
+		return nil, fmt.Errorf("fail to parse url:%w", err)
 	}
 	c, err := ftp.Dial(link.Host, ftp.DialWithTimeout(30*time.Second))
 	if err != nil {

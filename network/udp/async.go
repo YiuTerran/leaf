@@ -1,6 +1,7 @@
 package udp
 
 import (
+	"errors"
 	"net"
 	"sync"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/YiuTerran/leaf/util/leafutil"
 	"github.com/YiuTerran/leaf/util/netutil"
 	"go.uber.org/atomic"
-	"golang.org/x/xerrors"
 )
 
 //这是一个异步的udp客户端，代码和服务端很类似，这里调用了DialUDP，因此视为"有连接的"
@@ -37,7 +37,7 @@ type AsyncClient struct {
 
 func (client *AsyncClient) Start() error {
 	if !client.status.CAS(NotInit, Inited) {
-		return xerrors.New("server inited")
+		return errors.New("server inited")
 	}
 	if client.MaxTry <= 0 {
 		client.MaxTry = 3
@@ -146,7 +146,7 @@ func (client *AsyncClient) WriteMsg(msg interface{}) error {
 		return err
 	}
 	if client.status.Load() == Closed {
-		return xerrors.New("client closed")
+		return errors.New("client closed")
 	}
 	if len(client.writeChan) == cap(client.writeChan) {
 		return ChanFullError

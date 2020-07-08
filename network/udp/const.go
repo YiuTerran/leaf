@@ -1,7 +1,7 @@
 package udp
 
 import (
-	"golang.org/x/xerrors"
+	"errors"
 )
 
 //udp是无连接的，直接将字节流读入读出即可
@@ -15,6 +15,6 @@ const (
 )
 
 var (
-	ChanFullError = xerrors.New("write chan full")
-	InitError     = xerrors.New("fail to init")
+	ChanFullError = errors.New("write chan full")
+	InitError     = errors.New("fail to init")
 )

@@ -1,12 +1,12 @@
 package mem
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 	"sync"
 )
 
 var (
-	KeyError = errors.New("Key not exist")
+	KeyError = errors.New("key not exist")
 )
 
 //缓存在内存里的lru cache

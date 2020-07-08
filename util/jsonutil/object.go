@@ -1,13 +1,12 @@
 package jsonutil
 
 import (
+	"errors"
+
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"strconv"
-
-	"github.com/pkg/errors"
-	"golang.org/x/xerrors"
 )
 
 //一个动态的json对象
@@ -42,7 +41,7 @@ func (j *JsonObject) Scan(src interface{}) error {
 
 func (j JsonObject) GetInt(key string) (int, error) {
 	if v, ok := j[key]; !ok {
-		return 0, xerrors.Errorf("key not exist")
+		return 0, errors.New("key not exist")
 	} else {
 		switch v.(type) {
 		case float64:
@@ -50,14 +49,14 @@ func (j JsonObject) GetInt(key string) (int, error) {
 		case string:
 			return strconv.Atoi(v.(string))
 		default:
-			return 0, xerrors.Errorf("type error")
+			return 0, errors.New("type error")
 		}
 	}
 }
 
 func (j JsonObject) GetInt64(key string) (int64, error) {
 	if v, ok := j[key]; !ok {
-		return 0, xerrors.Errorf("key not exist")
+		return 0, errors.New("key not exist")
 	} else {
 		switch v.(type) {
 		case float64:
@@ -65,14 +64,14 @@ func (j JsonObject) GetInt64(key string) (int64, error) {
 		case string:
 			return strconv.ParseInt(v.(string), 0, 64)
 		default:
-			return 0, xerrors.Errorf("type error")
+			return 0, errors.New("type error")
 		}
 	}
 }
 
 func (j JsonObject) GetString(key string) (string, error) {
 	if v, ok := j[key]; !ok {
-		return "", xerrors.Errorf("key not exist")
+		return "", errors.New("key not exist")
 	} else {
 		switch v.(type) {
 		case string:
@@ -80,7 +79,7 @@ func (j JsonObject) GetString(key string) (string, error) {
 		case float64:
 			return fmt.Sprint(v), nil
 		default:
-			return "", xerrors.Errorf("type error")
+			return "", errors.New("type error")
 		}
 	}
 }
