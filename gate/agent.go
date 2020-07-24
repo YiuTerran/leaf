@@ -51,7 +51,7 @@ func (a *agent) OnClose() {
 	if a.gate.AgentChanRPC() != nil {
 		err := a.gate.AgentChanRPC().Call0(AgentBeforeCloseEvent, a)
 		if err != nil {
-			log.Error("chanrpc error: %v", err)
+			log.Warn("chanrpc error: %v", err)
 		}
 	}
 }
