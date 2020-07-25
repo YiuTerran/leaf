@@ -22,11 +22,14 @@ type Server struct {
 	CertFile        string
 	KeyFile         string
 	NewAgent        func(*Conn) network.Agent
-	ln              net.Listener
-	handler         *Handler
+	TextFormat      bool
+
+	ln      net.Listener
+	handler *Handler
 }
 
 type Handler struct {
+	textFormat      bool
 	maxConnNum      int
 	pendingWriteNum int
 	maxMsgLen       uint32
@@ -82,7 +85,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.conns[conn] = struct{}{}
 	handler.mutexConns.Unlock()
 
-	wsConn := newWSConn(conn, handler.pendingWriteNum, handler.maxMsgLen)
+	wsConn := newWSConn(conn, handler.pendingWriteNum, handler.maxMsgLen, handler.textFormat)
 	wsConn.SetOriginIP(getRealIP(r))
 	agent := handler.newAgent(wsConn)
 	agent.Run()
@@ -137,6 +140,7 @@ func (server *Server) Start() {
 
 	server.ln = ln
 	server.handler = &Handler{
+		textFormat:      server.TextFormat,
 		maxConnNum:      server.MaxConnNum,
 		pendingWriteNum: server.PendingWriteNum,
 		maxMsgLen:       server.MaxMsgLen,

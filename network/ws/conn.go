@@ -20,19 +20,22 @@ type Conn struct {
 	remoteOriginIP net.Addr
 }
 
-func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32) *Conn {
+func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32, textFormat bool) *Conn {
 	wsConn := new(Conn)
 	wsConn.conn = conn
 	wsConn.writeChan = make(chan []byte, pendingWriteNum)
 	wsConn.maxMsgLen = maxMsgLen
-
+	msgType := websocket.BinaryMessage
+	if textFormat {
+		msgType = websocket.TextMessage
+	}
 	go func() {
 		for b := range wsConn.writeChan {
 			if b == nil {
 				break
 			}
 
-			err := conn.WriteMessage(websocket.BinaryMessage, b)
+			err := conn.WriteMessage(msgType, b)
 			if err != nil {
 				break
 			}

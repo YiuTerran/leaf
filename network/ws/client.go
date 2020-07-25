@@ -19,10 +19,12 @@ type Client struct {
 	HandshakeTimeout time.Duration
 	AutoReconnect    bool
 	NewAgent         func(*Conn) network.Agent
-	dialer           websocket.Dialer
-	conns            WebsocketConnSet
-	wg               sync.WaitGroup
-	closeFlag        bool
+	TextFormat       bool
+
+	dialer    websocket.Dialer
+	conns     WebsocketConnSet
+	wg        sync.WaitGroup
+	closeFlag bool
 }
 
 func (client *Client) Start() {
@@ -104,7 +106,7 @@ reconnect:
 	client.conns[conn] = struct{}{}
 	client.Unlock()
 
-	wsConn := newWSConn(conn, client.PendingWriteNum, client.MaxMsgLen)
+	wsConn := newWSConn(conn, client.PendingWriteNum, client.MaxMsgLen, client.TextFormat)
 	agent := client.NewAgent(wsConn)
 	agent.Run()
 

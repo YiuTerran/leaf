@@ -1,4 +1,4 @@
-package mem
+package memutil
 
 import (
 	"sync"
