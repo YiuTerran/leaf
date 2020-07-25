@@ -11,6 +11,7 @@ import (
 
 type WsClient struct {
 	Server        string
+	MsgTextFormat bool
 	HttpTimeout   time.Duration
 	MsgProcessor  processor.Processor
 	RPCServer     *chanrpc.Server
@@ -35,6 +36,7 @@ func (w *WsClient) Run(closeSig chan struct{}) {
 			ConnectInterval:  3 * time.Second,
 			HandshakeTimeout: w.HttpTimeout,
 			AutoReconnect:    w.AutoReconnect,
+			TextFormat:       w.MsgTextFormat,
 			NewAgent: func(conn *ws.Conn) network.Agent {
 				a := &agent{conn: conn, gate: w}
 				if w.RPCServer != nil {

@@ -14,6 +14,7 @@ type WsGate struct {
 	PendingWriteNum int
 	MaxMsgLen       uint32
 	MsgProcessor    processor.Processor
+	MsgTextFormat   bool
 	RPCServer       *chanrpc.Server
 
 	Addr        string
@@ -35,6 +36,7 @@ func (gate *WsGate) Run(closeSig chan struct{}) {
 	if gate.Addr != "" {
 		wsServer = new(ws.Server)
 		wsServer.Addr = gate.Addr
+		wsServer.TextFormat = gate.MsgTextFormat
 		wsServer.MaxConnNum = gate.MaxConnNum
 		wsServer.PendingWriteNum = gate.PendingWriteNum
 		wsServer.MaxMsgLen = gate.MaxMsgLen
