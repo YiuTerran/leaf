@@ -1,6 +1,7 @@
 package module
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 
@@ -8,9 +9,9 @@ import (
 	"github.com/YiuTerran/leaf/log"
 )
 
-//leaf的模块，启动时按注册顺序逐个启动
-//模块的版本用于热加载，当程序调用Reload时，leaf重新获取当前需要激活的mod，根据Action执行对应的操作
+//leaf的模块
 
+//当程序调用Reload时，leaf重新获取当前需要激活的mod，根据Action执行对应的操作
 type Action int
 
 const (
@@ -22,7 +23,7 @@ const (
 
 type Module interface {
 	Name() string
-	Version() string //用于标示module配置是否修改，可以用一些关键的配置hash
+	Version() string //用于热加载，标示module配置是否修改，可以用一些关键的配置hash
 	OnInit()
 	OnDestroy()
 	Run(closeSig chan struct{})
@@ -36,13 +37,17 @@ type module struct {
 }
 
 var (
-	mods = make(map[string]*module)
-	lock sync.Mutex
+	mods       = make(map[string]*module)
+	lock       sync.Mutex
+	staticMode bool //静态模式
 )
 
 func Reload(actionMds map[Action][]Module) {
 	lock.Lock()
 	defer lock.Unlock()
+	if staticMode {
+		return
+	}
 	for action, mis := range actionMds {
 		//不管是哪种行为，都要删除旧模块
 		for _, mi := range mis {
@@ -73,6 +78,22 @@ func Reload(actionMds map[Action][]Module) {
 	}
 }
 
+//静态加载，按严格的顺序加载模块
+func StaticLoad(mis []Module) {
+	lock.Lock()
+	defer lock.Unlock()
+	staticMode = true
+	for i, mi := range mis {
+		m := new(module)
+		m.mi = mi
+		m.closeSig = make(chan struct{}, 1)
+		mods[fmt.Sprint(i)] = m
+		mi.OnInit()
+		m.wg.Add(1)
+		go run(m)
+	}
+}
+
 func destroyMod(mod *module) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -88,10 +109,17 @@ func destroyMod(mod *module) {
 	log.Info("module %s destroyed", mod.mi.Name())
 }
 
-//由于修改了执行逻辑，Destroy这里变得无序，在leaf那边注册一个before close的回调来
 func Destroy() {
 	lock.Lock()
 	defer lock.Unlock()
+	//静态模式下按着严格的顺序逆序销毁模块
+	if staticMode {
+		for i := len(mods); i >= 0; i-- {
+			destroyMod(mods[fmt.Sprint(i)])
+		}
+		return
+	}
+	//动态模式下Destroy变得无序，所以在leaf的Run那里注册一个before close的回调来做所有模块关闭前的处理
 	for _, mod := range mods {
 		log.Debug("destroying module %s", mod.mi.Name())
 		destroyMod(mod)

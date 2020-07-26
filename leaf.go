@@ -41,6 +41,7 @@ func reload(getMods GetModules) {
 	}
 }
 
+//一般运行模式：开启模块热加载特性
 func Run(consolePort int, getMods GetModules, beforeClose func()) {
 	//注意在此之前要调用log.InitLogger
 	log.Info("Server %v starting up", version)
@@ -58,6 +59,19 @@ func Run(consolePort int, getMods GetModules, beforeClose func()) {
 		beforeClose()
 	}
 	signal.Stop(closeChannel)
+	console.Destroy()
+	module.Destroy()
+	log.Info("Server closing down")
+}
+
+//模块以静态模式加载（关闭热加载特性）
+func StaticRun(consolePort int, mods []module.Module) {
+	//注意在此之前要调用log.InitLogger
+	log.Info("Server %v starting up", version)
+	module.StaticLoad(mods)
+	console.Init(consolePort)
+	signal.Notify(closeChannel, os.Interrupt, os.Kill)
+	<-closeChannel
 	console.Destroy()
 	module.Destroy()
 	log.Info("Server closing down")
