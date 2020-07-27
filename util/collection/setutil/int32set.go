@@ -1,9 +1,31 @@
 package setutil
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+)
+
 //如果需要通用泛型，可以使用github.com/deckarep/golang-set这个包
 //非goroutine安全
 type Int32Set struct {
 	set map[int32]struct{}
+}
+
+//自定义序列化
+func (d Int32Set) Value() (driver.Value, error) {
+	return json.Marshal(d.ToArray())
+}
+
+func (d *Int32Set) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	var tmp []int32
+	if err := json.Unmarshal(src.([]byte), &tmp); err != nil {
+		return err
+	}
+	*d = *NewInt32Set(tmp...)
+	return nil
 }
 
 func NewInt32Set(items ...int32) *Int32Set {

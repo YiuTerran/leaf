@@ -1,7 +1,29 @@
 package setutil
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+)
+
 type StringSet struct {
 	set map[string]struct{}
+}
+
+//自定义序列化
+func (d StringSet) Value() (driver.Value, error) {
+	return json.Marshal(d.ToArray())
+}
+
+func (d *StringSet) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	var tmp []string
+	if err := json.Unmarshal(src.([]byte), &tmp); err != nil {
+		return err
+	}
+	*d = *NewStringSet(tmp...)
+	return nil
 }
 
 func NewStringSet(items ...string) *StringSet {

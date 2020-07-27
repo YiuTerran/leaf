@@ -1,7 +1,29 @@
 package setutil
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+)
+
 type Int64Set struct {
 	set map[int64]struct{}
+}
+
+//自定义序列化
+func (d Int64Set) Value() (driver.Value, error) {
+	return json.Marshal(d.ToArray())
+}
+
+func (d *Int64Set) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	var tmp []int64
+	if err := json.Unmarshal(src.([]byte), &tmp); err != nil {
+		return err
+	}
+	*d = *NewInt64Set(tmp...)
+	return nil
 }
 
 func NewInt64Set(items ...int64) *Int64Set {
