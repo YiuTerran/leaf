@@ -20,19 +20,21 @@ const (
 )
 
 var (
-	tracker    *zap.Logger
-	logger     *zap.SugaredLogger
-	logPath    string
-	infoWriter io.Writer
-	warnWriter io.Writer
-	once       sync.Once
+	tracker     *zap.Logger
+	logger      *zap.SugaredLogger
+	debugLogger *zap.SugaredLogger
+	logPath     string
+	infoWriter  io.Writer
+	warnWriter  io.Writer
+	once        sync.Once
 
 	debug  = zap.NewAtomicLevelAt(zap.DebugLevel)
 	inited = atomic.NewBool(false)
 )
 
+//调试模式下打印caller，其他忽略，减少开销
 func Debug(format string, a ...interface{}) {
-	logger.Debugf(format, a...)
+	debugLogger.Debugf(format, a...)
 }
 
 func Info(format string, a ...interface{}) {
@@ -128,7 +130,8 @@ func InitLogger(path string) {
 		//都输出到标准输出，方便调试
 		warnWriter = getWriter(filepath.Join(path, "error.log"))
 		infoWriter = getWriter(filepath.Join(path, "service.log"))
-		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+		consoleConfig := zap.NewDevelopmentEncoderConfig()
+		encoder := zapcore.NewConsoleEncoder(consoleConfig)
 		core := zapcore.NewTee(
 			// 将info及以下写入logPath,  warn及以上写入errPath
 			zapcore.NewCore(encoder, zapcore.AddSync(infoWriter), all),
@@ -137,7 +140,9 @@ func InitLogger(path string) {
 			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
 		)
 		lg := zap.New(core)
+		dlg := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 		logger = lg.Sugar()
+		debugLogger = dlg.Sugar()
 		inited.Store(true)
 	})
 }
