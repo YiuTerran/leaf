@@ -113,7 +113,7 @@ func (server *Server) Start() {
 		log.Info("invalid BufferSize, reset to %v", server.PendingWriteNum)
 	}
 	if server.MaxMsgLen <= 0 {
-		server.MaxMsgLen = 40960
+		server.MaxMsgLen = 2048000
 		log.Info("invalid MaxMsgLen, reset to %v", server.MaxMsgLen)
 	}
 	if server.HTTPTimeout <= 0 {
