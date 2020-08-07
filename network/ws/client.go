@@ -53,7 +53,7 @@ func (client *Client) init() {
 		log.Debug("invalid BufferSize, reset to %v", client.PendingWriteNum)
 	}
 	if client.MaxMsgLen <= 0 {
-		client.MaxMsgLen = 4096
+		client.MaxMsgLen = 2048000
 		log.Debug("invalid MaxMsgLen, reset to %v", client.MaxMsgLen)
 	}
 	if client.HandshakeTimeout <= 0 {
