@@ -140,9 +140,8 @@ func InitLogger(path string) {
 			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
 		)
 		lg := zap.New(core)
-		dlg := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 		logger = lg.Sugar()
-		debugLogger = dlg.Sugar()
+		debugLogger = lg.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
 		inited.Store(true)
 	})
 }
