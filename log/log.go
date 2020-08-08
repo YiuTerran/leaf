@@ -20,13 +20,14 @@ const (
 )
 
 var (
-	tracker     *zap.Logger
-	logger      *zap.SugaredLogger
-	debugLogger *zap.SugaredLogger
-	logPath     string
-	infoWriter  io.Writer
-	warnWriter  io.Writer
-	once        sync.Once
+	tracker      *zap.Logger
+	normalLogger *zap.SugaredLogger
+	debugLogger  *zap.SugaredLogger
+	logger       atomic.Value
+	logPath      string
+	infoWriter   io.Writer
+	warnWriter   io.Writer
+	once         sync.Once
 
 	debug  = zap.NewAtomicLevelAt(zap.DebugLevel)
 	inited = atomic.NewBool(false)
@@ -34,23 +35,23 @@ var (
 
 //调试模式下打印caller，其他忽略，减少开销
 func Debug(format string, a ...interface{}) {
-	debugLogger.Debugf(format, a...)
+	logger.Load().(*zap.SugaredLogger).Debugf(format, a...)
 }
 
 func Info(format string, a ...interface{}) {
-	logger.Infof(format, a...)
+	logger.Load().(*zap.SugaredLogger).Infof(format, a...)
 }
 
 func Warn(format string, a ...interface{}) {
-	logger.Warnf(format, a...)
+	logger.Load().(*zap.SugaredLogger).Warnf(format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	logger.Errorf(format, a...)
+	logger.Load().(*zap.SugaredLogger).Errorf(format, a...)
 }
 
 func Fatal(format string, a ...interface{}) {
-	logger.Fatalf(format, a...)
+	logger.Load().(*zap.SugaredLogger).Fatalf(format, a...)
 }
 
 //输出json的track
@@ -80,8 +81,10 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 func EnableDebug(option bool) {
 	if option {
 		debug.SetLevel(zap.DebugLevel)
+		logger.Store(debugLogger)
 	} else {
 		debug.SetLevel(zap.InfoLevel)
+		logger.Store(normalLogger)
 	}
 }
 
@@ -140,8 +143,9 @@ func InitLogger(path string) {
 			zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), all),
 		)
 		lg := zap.New(core)
-		logger = lg.Sugar()
+		normalLogger = lg.Sugar()
 		debugLogger = lg.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
+		EnableDebug(true)
 		inited.Store(true)
 	})
 }
@@ -162,11 +166,11 @@ func getWriter(filename string) io.Writer {
 }
 
 func GetOriginLogger() *zap.SugaredLogger {
-	return logger
+	return normalLogger
 }
 
 //关闭服务器之前调用，同步缓冲区
 func CloseLogger() {
-	_ = logger.Sync()
+	_ = normalLogger.Sync()
 	_ = tracker.Sync()
 }
