@@ -72,7 +72,7 @@ func Reload(actionMds map[Action][]Module) {
 				mi.OnInit()
 				m.wg.Add(1)
 				go run(m)
-				log.Info("module %s registered", mi.Name())
+				log.Info("module registered: %s", mi.Name())
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func destroyMod(mod *module) {
 	mod.wg.Wait()
 	mod.mi.OnDestroy()
 	delete(mods, mod.mi.Name())
-	log.Info("module %s destroyed", mod.mi.Name())
+	log.Info("module destroyed: %s", mod.mi.Name())
 }
 
 func Destroy() {
