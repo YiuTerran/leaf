@@ -212,3 +212,13 @@ func (j JsonObject) GetJsonObject(key string) (JsonObject, error) {
 	}
 	return nil, KeyError
 }
+
+func (j JsonObject) ToString() string {
+	if j == nil {
+		return "{}"
+	}
+	if x, err := json.Marshal(j); err == nil {
+		return string(x)
+	}
+	return ""
+}

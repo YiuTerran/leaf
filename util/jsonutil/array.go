@@ -198,3 +198,13 @@ func (ja JsonArray) GetArrayByIndex(index int) (JsonArray, error) {
 	}
 	return nil, TypeError
 }
+
+func (ja JsonArray) ToString() string {
+	if ja == nil {
+		return "[]"
+	}
+	if x, err := json.Marshal(ja); err == nil {
+		return string(x)
+	}
+	return ""
+}

@@ -19,6 +19,7 @@ func TestLoadsKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	t.Log(fs.ToString())
 	if len(fs) != 2 {
 		t.Errorf("fruit length error!, %s\n", fs)
 	}
