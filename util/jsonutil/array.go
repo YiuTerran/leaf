@@ -199,7 +199,7 @@ func (ja JsonArray) GetArrayByIndex(index int) (JsonArray, error) {
 	return nil, TypeError
 }
 
-func (ja JsonArray) ToString() string {
+func (ja JsonArray) String() string {
 	if ja == nil {
 		return "[]"
 	}
