@@ -2,6 +2,8 @@ package tz
 
 import (
 	"time"
+
+	"github.com/YiuTerran/leaf/log"
 )
 
 const (
@@ -42,6 +44,15 @@ func GetNowTs() int64 {
 	return time.Now().Unix()
 }
 
+func preventPanic(what func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("panic:%s", r)
+		}
+	}()
+	what()
+}
+
 //固定频率，不会立刻执行
 func Schedule(what func(), delay time.Duration, stop chan struct{}) {
 	go func() {
@@ -50,7 +61,7 @@ func Schedule(what func(), delay time.Duration, stop chan struct{}) {
 		for {
 			select {
 			case <-ticker.C:
-				what()
+				preventPanic(what)
 			case <-stop:
 				return
 			}
@@ -68,7 +79,7 @@ func DynamicSchedule(what func(), delayAddr *time.Duration, stop chan struct{}) 
 		for {
 			select {
 			case <-time.After(*delayAddr):
-				what()
+				preventPanic(what)
 			case <-stop:
 				return
 			}
@@ -87,7 +98,7 @@ func DynamicCycle(what func(), delayAddr *time.Duration, stop chan struct{}) {
 		timer := time.NewTimer(*delayAddr)
 		defer timer.Stop()
 		for {
-			what()
+			preventPanic(what)
 			timer.Reset(*delayAddr)
 			select {
 			case <-timer.C:
