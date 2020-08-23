@@ -9,6 +9,9 @@ type JsonArray []interface{}
 
 //自定义序列化
 func (ja JsonArray) Value() (driver.Value, error) {
+	if ja == nil {
+		return nil, nil
+	}
 	return json.Marshal(ja)
 }
 

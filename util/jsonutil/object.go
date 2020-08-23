@@ -24,6 +24,9 @@ var (
 
 //自定义序列化
 func (j JsonObject) Value() (driver.Value, error) {
+	if j == nil {
+		return nil, nil
+	}
 	return json.Marshal(j)
 }
 
