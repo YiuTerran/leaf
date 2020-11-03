@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func byteToString(bs []byte, delim string, formatter string) string {
@@ -56,5 +58,20 @@ func RemoveUUIDDash(uid string) string {
 func Md5HexString(bs []byte) string {
 	m := md5.New()
 	m.Write(bs)
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+func UUID4() string {
+	u, _ := uuid.NewRandom()
+	return u.String()
+}
+
+func Md5(param ...interface{}) string {
+	m := md5.New()
+	var ss strings.Builder
+	for _, p := range param {
+		ss.WriteString(fmt.Sprint(p))
+	}
+	m.Write([]byte(ss.String()))
 	return hex.EncodeToString(m.Sum(nil))
 }
