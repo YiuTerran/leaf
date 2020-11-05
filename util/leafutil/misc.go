@@ -32,7 +32,7 @@ func FindPathFrom(root string, name string) string {
 			if log.IsInit() {
 				log.Error("can't find path from %s, it should be named `%s`", root, name)
 			} else {
-				panic(fmt.Sprintf("path %s can't be found from %s!!", name, root))
+				panic(fmt.Sprintf("path %s can't be found from %s!!\n", name, root))
 			}
 			return ""
 		}
