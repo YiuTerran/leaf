@@ -108,6 +108,18 @@ func exists(path string) bool {
 //其他的输出到标准输出和标准错误
 func InitLogger(path string) {
 	once.Do(func() {
+		//空白路径，只在控制台输出，方便调试
+		if path == "" {
+			lg, err := zap.NewDevelopment()
+			if err != nil {
+				return
+			}
+			normalLogger = lg.Sugar()
+			debugLogger = lg.Sugar()
+			tracker = lg
+			EnableDebug(true)
+			return
+		}
 		if !exists(path) && os.Mkdir(path, os.ModePerm) != nil {
 			panic("fail to create log directory")
 		}

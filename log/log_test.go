@@ -7,8 +7,7 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	InitLogger("/tmp/")
-	EnableDebug(true)
+	InitLogger("")
 	Debug("this is a debug")
 	Info("hello %v", "world")
 	Error("fail to %v", "open the door")
