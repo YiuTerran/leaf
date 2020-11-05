@@ -2,6 +2,7 @@ package log
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -108,6 +109,7 @@ func exists(path string) bool {
 //其他的输出到标准输出和标准错误
 func InitLogger(path string) {
 	once.Do(func() {
+		fmt.Printf("init log to dir `%s`", path)
 		//空白路径，只在控制台输出，方便调试
 		if path == "" {
 			lg, err := zap.NewDevelopment()
