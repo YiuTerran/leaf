@@ -50,8 +50,7 @@ func (server *Server) init() {
 
 	// msg parser
 	if server.Parser == nil {
-		msgParser := NewDefaultParser()
-		server.Parser = msgParser
+		server.Parser = NewDefaultParser()
 	}
 }
 
@@ -84,7 +83,7 @@ func (server *Server) run() {
 		if len(server.conns) >= server.MaxConnNum {
 			server.mutexConns.Unlock()
 			_ = conn.Close()
-			log.Debug("too many connections")
+			log.Warn("too many tcp connections")
 			continue
 		}
 		server.conns[conn] = struct{}{}
