@@ -28,10 +28,12 @@ func (a *agent) Run() {
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
-			log.Debug("read message: %v", err)
+			log.Debug("read message error: %v", err)
 			break
 		}
-
+		if len(data) == 0 {
+			continue
+		}
 		if a.gate.Processor() != nil {
 			msg, err := a.gate.Processor().Unmarshal(data)
 			if err != nil {
