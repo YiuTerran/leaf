@@ -24,6 +24,7 @@ type agent struct {
 	userData interface{}
 }
 
+//这里出现真的错误才要断开连接
 func (a *agent) Run() {
 	for {
 		data, err := a.conn.ReadMsg()
