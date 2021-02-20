@@ -114,7 +114,7 @@ func Destroy() {
 	defer lock.Unlock()
 	//静态模式下按着严格的顺序逆序销毁模块
 	if staticMode {
-		for i := len(mods); i >= 0; i-- {
+		for i := len(mods) - 1; i >= 0; i-- {
 			destroyMod(mods[fmt.Sprint(i)])
 		}
 		return
