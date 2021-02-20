@@ -91,6 +91,7 @@ func StaticLoad(mis []Module) {
 		mi.OnInit()
 		m.wg.Add(1)
 		go run(m)
+		log.Info("module registered: %s", mi.Name())
 	}
 }
 
