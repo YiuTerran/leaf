@@ -3,9 +3,11 @@ module github.com/YiuTerran/leaf
 go 1.13
 
 require (
+	github.com/araddon/dateparse v0.0.0-20210207001429-0eec95c9db7e // indirect
 	github.com/disintegration/imaging v1.6.2
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/golang/protobuf v1.4.2
+	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jlaffaye/ftp v0.0.0-20200602180915-5563613968bf
@@ -18,5 +20,4 @@ require (
 	go.uber.org/zap v1.15.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.4 // indirect
-	github.com/google/uuid v1.1.1
 )
