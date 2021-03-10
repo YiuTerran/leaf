@@ -12,7 +12,7 @@ type Time struct {
 	time.Time
 }
 
-func (t *Time) string() string {
+func (t *Time) String() string {
 	return t.Format(tz.FullFormat)
 }
 
@@ -26,7 +26,7 @@ func (t *Time) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (t Time) MarshalJSON() ([]byte, error) {
-	return []byte(t.Format(tz.FullFormat)), nil
+	return []byte(t.String()), nil
 }
 
 //自定义序列化
