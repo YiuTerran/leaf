@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"time"
 
+	"github.com/YiuTerran/leaf/log"
 	"github.com/YiuTerran/leaf/util/tz"
 	"github.com/araddon/dateparse"
 )
@@ -19,6 +20,7 @@ func (t *Time) String() string {
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
 	realT, err := dateparse.ParseLocal(string(data))
 	if err != nil {
+		log.Warn("fail to parse %s to time", string(data))
 		return err
 	}
 	(*t).Time = realT
