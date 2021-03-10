@@ -18,6 +18,10 @@ func (t *Time) String() string {
 }
 
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
+	if len(data) <= 2 {
+		return nil
+	}
+	data = data[1 : len(data)-1] //去除双引号
 	realT, err := dateparse.ParseLocal(string(data))
 	if err != nil {
 		log.Warn("fail to parse %s to time", string(data))
@@ -28,7 +32,7 @@ func (t *Time) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (t Time) MarshalJSON() ([]byte, error) {
-	return []byte(t.String()), nil
+	return []byte(`"` + t.String() + `"`), nil
 }
 
 //自定义序列化
