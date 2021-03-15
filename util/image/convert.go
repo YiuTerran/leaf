@@ -34,6 +34,16 @@ func RemoveImgBase64Header(img string) string {
 	return img
 }
 
+func SplitBase64HeaderData(img string) (t, d string) {
+	if idx := strings.Index(img, base64Header); idx >= 0 {
+		t, d = img[0:idx+8], img[idx+8:]
+		t = strings.Split(t, "/")[1]
+		t = strings.Split(t, ";")[0]
+		return
+	}
+	return "jpeg", img
+}
+
 func AddImgBase64Header(img string) string {
 	if strings.HasPrefix(img, "data:image") {
 		return img
