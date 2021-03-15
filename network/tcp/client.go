@@ -24,6 +24,43 @@ type Client struct {
 	closeFlag bool
 }
 
+type Option func(*Client)
+
+func NewClient(addr string, newAgentCallback func(*Conn) network.Agent, options ...Option) *Client {
+	c := &Client{
+		Addr:            addr,
+		ConnNum:         1,
+		ConnectInterval: 3 * time.Second,
+		AutoReconnect:   true,
+		PendingWriteNum: 100,
+		Parser:          NewDefaultParser(),
+		NewAgent:        newAgentCallback,
+		conns:           ConnSet{},
+	}
+	for _, option := range options {
+		option(c)
+	}
+	return c
+}
+
+func ConnNum(num int) Option {
+	return func(client *Client) {
+		client.ConnNum = num
+	}
+}
+
+func ConnectInterval(dr time.Duration) Option {
+	return func(client *Client) {
+		client.ConnectInterval = dr
+	}
+}
+
+func Parser(p IParser) Option {
+	return func(client *Client) {
+		client.Parser = p
+	}
+}
+
 func (client *Client) Start() {
 	client.init()
 
