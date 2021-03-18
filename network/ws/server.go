@@ -22,7 +22,8 @@ type Server struct {
 	CertFile        string
 	KeyFile         string
 	NewAgent        func(*Conn) network.Agent
-	TextFormat      bool
+	AuthFunc        func(*http.Request) bool
+	TextFormat      bool //纯文本还是二进制
 
 	ln      net.Listener
 	handler *Handler
@@ -32,6 +33,7 @@ type Handler struct {
 	textFormat      bool
 	maxConnNum      int
 	pendingWriteNum int
+	authFunc        func(*http.Request) bool
 	maxMsgLen       uint32
 	newAgent        func(*Conn) network.Agent
 	upgrader        websocket.Upgrader
@@ -58,6 +60,10 @@ func getRealIP(req *http.Request) net.Addr {
 func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	if handler.authFunc != nil && !handler.authFunc(r) {
+		http.Error(w, "Forbidden", 403)
 		return
 	}
 	conn, err := handler.upgrader.Upgrade(w, r, nil)
@@ -141,6 +147,7 @@ func (server *Server) Start() {
 	server.ln = ln
 	server.handler = &Handler{
 		textFormat:      server.TextFormat,
+		authFunc:        server.AuthFunc,
 		maxConnNum:      server.MaxConnNum,
 		pendingWriteNum: server.PendingWriteNum,
 		maxMsgLen:       server.MaxMsgLen,
