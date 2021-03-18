@@ -1,6 +1,7 @@
 package gate
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/YiuTerran/leaf/chanrpc"
@@ -15,6 +16,7 @@ type WsGate struct {
 	MaxMsgLen       uint32
 	MsgProcessor    processor.Processor
 	MsgTextFormat   bool
+	AuthFunc        func(*http.Request) bool
 	RPCServer       *chanrpc.Server
 
 	Addr        string
@@ -37,6 +39,7 @@ func (gate *WsGate) Run(closeSig chan struct{}) {
 		wsServer = new(ws.Server)
 		wsServer.Addr = gate.Addr
 		wsServer.TextFormat = gate.MsgTextFormat
+		wsServer.AuthFunc = gate.AuthFunc
 		wsServer.MaxConnNum = gate.MaxConnNum
 		wsServer.PendingWriteNum = gate.PendingWriteNum
 		wsServer.MaxMsgLen = gate.MaxMsgLen
