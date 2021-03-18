@@ -2,6 +2,7 @@ package ws
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -40,6 +41,71 @@ type Handler struct {
 	conns           WebsocketConnSet
 	mutexConns      sync.Mutex
 	wg              sync.WaitGroup
+}
+
+type Option func(*Server)
+
+func NewServer(port int, newAgentCallback func(*Conn) network.Agent, options ...Option) *Server {
+	if port <= 0 || port > 65535 {
+		return nil
+	}
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
+	server := &Server{
+		Addr:            addr,
+		MaxConnNum:      20000,
+		PendingWriteNum: 1000,
+		MaxMsgLen:       1024000,
+		HTTPTimeout:     10 * time.Second,
+		NewAgent:        newAgentCallback,
+		TextFormat:      false,
+	}
+	for _, option := range options {
+		option(server)
+	}
+	return server
+}
+
+func WithMaxConnNum(num int) Option {
+	return func(server *Server) {
+		server.MaxConnNum = num
+	}
+}
+
+func WithPendingWriteNum(num int) Option {
+	return func(server *Server) {
+		server.PendingWriteNum = num
+	}
+}
+
+func WithMaxMsgLen(num uint32) Option {
+	return func(server *Server) {
+		server.MaxMsgLen = num
+	}
+}
+
+func WithHttpTimeout(duration time.Duration) Option {
+	return func(server *Server) {
+		server.HTTPTimeout = duration
+	}
+}
+
+func WithHttpsCert(cert, key string) Option {
+	return func(server *Server) {
+		server.CertFile = cert
+		server.KeyFile = key
+	}
+}
+
+func WithAuthFunc(authFunc func(*http.Request) bool) Option {
+	return func(server *Server) {
+		server.AuthFunc = authFunc
+	}
+}
+
+func WithTextFormat(usingText bool) Option {
+	return func(server *Server) {
+		server.TextFormat = usingText
+	}
 }
 
 func getRealIP(req *http.Request) net.Addr {
