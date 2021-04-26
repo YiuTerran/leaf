@@ -135,8 +135,8 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if handler.authFunc != nil {
 		if ok, userData = handler.authFunc(r); !ok {
 			http.Error(w, "Forbidden", 403)
+			return
 		}
-		return
 	}
 	conn, err := handler.upgrader.Upgrade(w, r, nil)
 	if err != nil {
