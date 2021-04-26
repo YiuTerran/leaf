@@ -23,7 +23,7 @@ type Server struct {
 	CertFile        string
 	KeyFile         string
 	NewAgent        func(*Conn) network.Agent
-	AuthFunc        func(*http.Request) bool
+	AuthFunc        func(*http.Request) (bool, interface{})
 	TextFormat      bool //纯文本还是二进制
 
 	ln      net.Listener
@@ -34,7 +34,7 @@ type Handler struct {
 	textFormat      bool
 	maxConnNum      int
 	pendingWriteNum int
-	authFunc        func(*http.Request) bool
+	authFunc        func(*http.Request) (bool, interface{})
 	maxMsgLen       uint32
 	newAgent        func(*Conn) network.Agent
 	upgrader        websocket.Upgrader
@@ -96,7 +96,7 @@ func WithHttpsCert(cert, key string) Option {
 	}
 }
 
-func WithAuthFunc(authFunc func(*http.Request) bool) Option {
+func WithAuthFunc(authFunc func(*http.Request) (bool, interface{})) Option {
 	return func(server *Server) {
 		server.AuthFunc = authFunc
 	}
@@ -128,8 +128,14 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	if handler.authFunc != nil && !handler.authFunc(r) {
-		http.Error(w, "Forbidden", 403)
+	var (
+		ok       bool
+		userData interface{}
+	)
+	if handler.authFunc != nil {
+		if ok, userData = handler.authFunc(r); !ok {
+			http.Error(w, "Forbidden", 403)
+		}
 		return
 	}
 	conn, err := handler.upgrader.Upgrade(w, r, nil)
@@ -158,7 +164,8 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.mutexConns.Unlock()
 
 	wsConn := newWSConn(conn, handler.pendingWriteNum, handler.maxMsgLen, handler.textFormat)
-	wsConn.SetOriginIP(getRealIP(r))
+	wsConn.remoteOriginIP = getRealIP(r)
+	wsConn.userData = userData
 	agent := handler.newAgent(wsConn)
 	agent.Run()
 

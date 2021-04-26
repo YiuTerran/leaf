@@ -18,6 +18,11 @@ type Conn struct {
 	maxMsgLen      uint32
 	closeFlag      bool
 	remoteOriginIP net.Addr
+	userData       interface{}
+}
+
+func (c *Conn) UserData() interface{} {
+	return c.userData
 }
 
 func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32, textFormat bool) *Conn {
@@ -48,10 +53,6 @@ func newWSConn(conn *websocket.Conn, pendingWriteNum int, maxMsgLen uint32, text
 	}()
 
 	return wsConn
-}
-
-func (wsConn *Conn) SetOriginIP(ip net.Addr) {
-	wsConn.remoteOriginIP = ip
 }
 
 func (wsConn *Conn) doDestroy() {

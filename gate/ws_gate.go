@@ -16,7 +16,7 @@ type WsGate struct {
 	MaxMsgLen       uint32
 	MsgProcessor    processor.Processor
 	MsgTextFormat   bool
-	AuthFunc        func(*http.Request) bool
+	AuthFunc        func(*http.Request) (bool, interface{})
 	RPCServer       *chanrpc.Server
 
 	Addr        string
@@ -47,7 +47,7 @@ func (gate *WsGate) Run(closeSig chan struct{}) {
 		wsServer.CertFile = gate.CertFile
 		wsServer.KeyFile = gate.KeyFile
 		wsServer.NewAgent = func(conn *ws.Conn) network.Agent {
-			a := &agent{conn: conn, gate: gate}
+			a := &agent{conn: conn, gate: gate, userData: conn.UserData()}
 			if gate.RPCServer != nil {
 				gate.RPCServer.Go(AgentCreatedEvent, a)
 			}
